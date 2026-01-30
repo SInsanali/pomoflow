@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25:00 - Pomodoro</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+    <style>
+        /* CSS Variables */
+        :root {
+            --bg-primary: #0d0d0d;
+            --bg-secondary: rgba(255, 255, 255, 0.03);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --bg-glass-hover: rgba(255, 255, 255, 0.08);
+            --pomodoro-accent: #ff6b6b;
+            --short-break-accent: #6bffb8;
+            --long-break-accent: #6bb3ff;
+            --accent: var(--pomodoro-accent);
+            --white: #ffffff;
+            --text-primary: rgba(255, 255, 255, 0.9);
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            --text-tertiary: rgba(255, 255, 255, 0.3);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.3s ease;
+        }
+
+        body.short-break {
+            --accent: var(--short-break-accent);
+        }
+
+        body.long-break {
+            --accent: var(--long-break-accent);
+        }
+
+        /* Color Background Mode */
+        body.color-bg {
+            background: color-mix(in srgb, var(--pomodoro-accent) 15%, #0d0d0d);
+        }
+        body.color-bg.short-break {
+            background: color-mix(in srgb, var(--short-break-accent) 15%, #0d0d0d);
+        }
+        body.color-bg.long-break {
+            background: color-mix(in srgb, var(--long-break-accent) 15%, #0d0d0d);
+        }
+
+        /* Container */
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 60px 20px 20px;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .settings-btn {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-btn:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        /* Timer Section */
+        .timer-section {
+            background: var(--bg-glass);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        /* Mode Tabs */
+        .mode-tabs {
+            display: inline-flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 50px;
+            background: var(--bg-glass);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mode-tab {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .mode-tab:hover {
+            color: var(--text-secondary);
+        }
+
+        .mode-tab.active {
+            background: var(--bg-glass-hover);
+            color: var(--accent);
+        }
+
+        /* Timer Display - Minimal Style */
+        .timer-display {
+            font-size: 7rem;
+            font-weight: 100;
+            letter-spacing: 2px;
+            margin-bottom: 50px;
+            font-variant-numeric: tabular-nums;
+            color: var(--accent);
+            transition: all 0.4s ease;
+        }
+
+        .timer-display.hidden { display: none; }
+
+        /* Timer Display - Circular Progress Style */
+        .timer-circular {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 50px;
+            display: none;
+        }
+        .timer-circular.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-ring {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+        .timer-ring .ring-bg {
+            fill: none;
+            stroke: var(--bg-glass);
+            stroke-width: 8;
+        }
+        .timer-ring .ring-progress {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 8;
+            stroke-linecap: butt;
+        }
+        .timer-circular .timer-text {
+            position: absolute;
+            font-size: 3.5rem;
+            font-weight: 100;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Timer Display - Flip Clock Style */
+        .timer-flip {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 50px;
+        }
+        .timer-flip.active { display: flex; }
+
+        .flip-group {
+            display: flex;
+            gap: 5px;
+        }
+        .flip-separator {
+            font-size: 4rem;
+            font-weight: 100;
+            color: var(--accent);
+            line-height: 1;
+            padding: 0 5px;
+        }
+        .flip-card {
+            position: relative;
+            width: 70px;
+            height: 100px;
+            perspective: 400px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .flip-card .top, .flip-card .bottom,
+        .flip-card .top-flip, .flip-card .bottom-flip {
+            position: absolute;
+            width: 100%;
+            height: 50%;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            font-weight: 200;
+            color: var(--accent);
+            overflow: hidden;
+            backface-visibility: hidden;
+        }
+        .flip-card .top, .flip-card .top-flip {
+            top: 0;
+            border-radius: 8px 8px 0 0;
+            align-items: flex-end;
+            border-bottom: none;
+            background: linear-gradient(180deg, rgba(40, 40, 40, 0.95) 0%, rgba(25, 25, 25, 0.95) 100%);
+        }
+        .flip-card .bottom, .flip-card .bottom-flip {
+            bottom: 0;
+            border-radius: 0 0 8px 8px;
+            align-items: flex-start;
+            border-top: 1px solid rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, rgba(20, 20, 20, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .flip-card .top span, .flip-card .top-flip span { transform: translateY(50%); }
+        .flip-card .bottom span, .flip-card .bottom-flip span { transform: translateY(-50%); }
+
+        /* Flip animation elements */
+        .flip-card .top-flip {
+            z-index: 2;
+            transform-origin: bottom center;
+        }
+        .flip-card .bottom-flip {
+            z-index: 1;
+            transform-origin: top center;
+            transform: rotateX(90deg);
+        }
+
+        /* Animation states */
+        .flip-card.flipping .top-flip {
+            animation: flipTop 0.3s ease-in forwards;
+        }
+        .flip-card.flipping .bottom-flip {
+            animation: flipBottom 0.3s ease-out 0.15s forwards;
+        }
+
+        @keyframes flipTop {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-90deg); }
+        }
+        @keyframes flipBottom {
+            0% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        @media (max-width: 480px) {
+            .timer-display {
+                font-size: 4.5rem;
+            }
+            .timer-circular {
+                width: 220px;
+                height: 220px;
+            }
+            .timer-circular .timer-text {
+                font-size: 2.5rem;
+            }
+            .flip-card {
+                width: 50px;
+                height: 70px;
+            }
+            .flip-card .top, .flip-card .bottom {
+                font-size: 2.5rem;
+            }
+            .flip-separator {
+                font-size: 2.5rem;
+            }
+            .timer-section {
+                padding: 40px 25px;
+            }
+        }
+
+        /* Timer Controls */
+        .timer-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-btn {
+            padding: 16px 48px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            font-family: inherit;
+        }
+
+        .control-btn.primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+
+        .control-btn.primary:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+
+        .control-btn.primary:active {
+            transform: translateY(0);
+            filter: brightness(0.95);
+        }
+
+        .control-btn.secondary {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 16px 18px;
+        }
+
+        .control-btn.secondary:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        /* Session Counter & Stats */
+        .session-stats {
+            margin-top: 35px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .session-counter {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            letter-spacing: 2px;
+        }
+        .session-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+        }
+        .streak-display {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .goal-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .goal-display button {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px 6px;
+            transition: color 0.2s;
+        }
+        .goal-display button:hover {
+            color: var(--text-primary);
+        }
+        .goal-progress {
+            color: var(--text-secondary);
+        }
+        .goal-display.goal-reached .goal-progress {
+            color: var(--short-break-accent);
+        }
+
+        /* Settings Panel (Side Drawer) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            right: -340px;
+            width: 320px;
+            height: 100vh;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-left: 1px solid var(--border-color);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            right: 0;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-header h2 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-glass-hover);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        @media (max-width: 400px) {
+            .modal {
+                width: 100%;
+                right: -100%;
+            }
+        }
+
+        .setting-group {
+            margin-bottom: 24px;
+        }
+
+        .setting-group h3 {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            letter-spacing: 1.5px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-row label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .setting-row input[type="number"] {
+            width: 65px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            text-align: center;
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .setting-row input[type="number"]:focus {
+            outline: none;
+            border-color: var(--border-light);
+            background: var(--bg-glass-hover);
+        }
+
+        .setting-row input[type="range"] {
+            width: 100px;
+            accent-color: var(--text-secondary);
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 46px;
+            height: 26px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-tertiary);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background-color: var(--bg-glass-hover);
+            border-color: var(--border-light);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background-color: var(--text-primary);
+        }
+
+        /* Volume display */
+        .volume-value {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Theme Grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .theme-swatch {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .theme-swatch:hover {
+            transform: scale(1.05);
+            border-color: var(--text-tertiary);
+        }
+
+        .theme-swatch.active {
+            border-color: var(--text-primary);
+        }
+
+        .theme-swatch .swatch-colors {
+            display: flex;
+            flex: 1;
+        }
+
+        .theme-swatch .swatch-color {
+            flex: 1;
+        }
+
+        .theme-swatch .swatch-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            font-size: 0.55rem;
+            text-align: center;
+            padding: 2px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .theme-swatch:hover .swatch-name {
+            opacity: 1;
+        }
+
+        /* Theme Select (for timer style) */
+        .theme-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            cursor: pointer;
+            min-width: 120px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .theme-select:focus {
+            outline: none;
+            border-color: var(--border-light);
+            background: var(--bg-glass-hover);
+        }
+
+        .theme-select option {
+            background: #1a1a1a;
+            color: var(--text-primary);
+        }
+
+        /* Test Sound Button */
+        .test-sound-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .test-sound-btn:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        /* Settings Action Buttons */
+        .setting-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .action-btn.danger {
+            border-color: rgba(255, 100, 100, 0.3);
+            color: rgba(255, 100, 100, 0.7);
+        }
+
+        .action-btn.danger:hover {
+            background: rgba(255, 100, 100, 0.1);
+            border-color: rgba(255, 100, 100, 0.5);
+            color: rgba(255, 100, 100, 0.9);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        /* Disconnect Overlay */
+        .disconnect-message {
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .disconnect-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .disconnect-message h2 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .disconnect-message p {
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .disconnect-hint {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <button class="settings-btn" onclick="openSettings()" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Timer Section -->
+        <section class="timer-section">
+            <!-- Mode Tabs -->
+            <div class="mode-tabs">
+                <button class="mode-tab active" data-mode="pomodoro" onclick="switchMode('pomodoro')">Pomodoro</button>
+                <button class="mode-tab" data-mode="shortBreak" onclick="switchMode('shortBreak')">Short Break</button>
+                <button class="mode-tab" data-mode="longBreak" onclick="switchMode('longBreak')">Long Break</button>
+            </div>
+
+            <!-- Timer Display - Minimal -->
+            <div class="timer-display" id="timer-display">25:00</div>
+
+            <!-- Timer Display - Circular -->
+            <div class="timer-circular" id="timer-circular">
+                <svg class="timer-ring" viewBox="0 0 100 100">
+                    <circle class="ring-bg" cx="50" cy="50" r="45" />
+                    <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="45"
+                            stroke-dasharray="283" stroke-dashoffset="0" />
+                </svg>
+                <div class="timer-text" id="timer-text-circular">25:00</div>
+            </div>
+
+            <!-- Timer Display - Flip Clock -->
+            <div class="timer-flip" id="timer-flip">
+                <div class="flip-group" id="flip-minutes">
+                    <div class="flip-card" data-digit="0">
+                        <div class="top"><span>2</span></div>
+                        <div class="bottom"><span>2</span></div>
+                        <div class="top-flip"><span>2</span></div>
+                        <div class="bottom-flip"><span>2</span></div>
+                    </div>
+                    <div class="flip-card" data-digit="1">
+                        <div class="top"><span>5</span></div>
+                        <div class="bottom"><span>5</span></div>
+                        <div class="top-flip"><span>5</span></div>
+                        <div class="bottom-flip"><span>5</span></div>
+                    </div>
+                </div>
+                <div class="flip-separator">:</div>
+                <div class="flip-group" id="flip-seconds">
+                    <div class="flip-card" data-digit="2">
+                        <div class="top"><span>0</span></div>
+                        <div class="bottom"><span>0</span></div>
+                        <div class="top-flip"><span>0</span></div>
+                        <div class="bottom-flip"><span>0</span></div>
+                    </div>
+                    <div class="flip-card" data-digit="3">
+                        <div class="top"><span>0</span></div>
+                        <div class="bottom"><span>0</span></div>
+                        <div class="top-flip"><span>0</span></div>
+                        <div class="bottom-flip"><span>0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timer Controls -->
+            <div class="timer-controls">
+                <button class="control-btn secondary" onclick="resetTimer()" title="Reset">↺</button>
+                <button class="control-btn primary" id="start-btn" onclick="toggleTimer()">Start</button>
+                <button class="control-btn secondary" onclick="skipTimer()" title="Skip">⏭</button>
+            </div>
+
+            <!-- Session Stats -->
+            <div class="session-stats">
+                <div class="session-counter" id="session-counter">Study 1</div>
+                <div class="session-meta">
+                    <div class="streak-display" id="streak-display" title="Total pomodoros completed">
+                        <span id="streak-count">0</span> completed
+                    </div>
+                    <div class="goal-display">
+                        <button onclick="adjustGoal(-1)">−</button>
+                        <span class="goal-progress"><span id="goal-current">0</span>/<span id="goal-target">4</span></span>
+                        <button onclick="adjustGoal(1)">+</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+Space: start/pause  ||  R: reset  ||  N: next
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Appearance Settings -->
+                <div class="setting-group">
+                    <h3>Color Theme</h3>
+                    <div class="theme-grid" id="theme-grid">
+                        <!-- Theme swatches generated by JS -->
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h3>Appearance</h3>
+                    <div class="setting-row">
+                        <label>Timer Style</label>
+                        <select id="setting-timer-style" class="theme-select">
+                            <option value="minimal">Minimal</option>
+                            <option value="circular">Circular</option>
+                            <option value="flip">Flip Clock</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Color Background</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-color-bg" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Timer Settings -->
+                <div class="setting-group">
+                    <h3>Timer (minutes)</h3>
+                    <div class="setting-row">
+                        <label>Pomodoro</label>
+                        <input type="number" id="setting-pomodoro" min="1" max="60" value="25">
+                    </div>
+                    <div class="setting-row">
+                        <label>Short Break</label>
+                        <input type="number" id="setting-short-break" min="1" max="30" value="5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Long Break</label>
+                        <input type="number" id="setting-long-break" min="1" max="60" value="15">
+                    </div>
+                </div>
+
+                <!-- Auto-start Settings -->
+                <div class="setting-group">
+                    <h3>Auto Start</h3>
+                    <div class="setting-row">
+                        <label>Auto-start Breaks</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-breaks" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Auto-start Pomodoros</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-pomodoros">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Sound Settings -->
+                <div class="setting-group">
+                    <h3>Sound</h3>
+                    <div class="setting-row">
+                        <label>Notification Sound</label>
+                        <select id="setting-sound" class="theme-select">
+                            <option value="chime">Chime</option>
+                            <option value="digital">Digital</option>
+                            <option value="gong">Gong</option>
+                            <option value="melody">Melody</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Volume</label>
+                        <input type="range" id="setting-volume" min="0" max="100" value="50">
+                        <span class="volume-value" id="volume-value">50%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Test Sound</label>
+                        <button class="test-sound-btn" onclick="playNotification(true)">Play</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>Browser Notifications</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-notifications" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="setting-group">
+                    <h3>Data</h3>
+                    <div class="setting-actions">
+                        <button class="action-btn" onclick="exportSettings()">Export Settings</button>
+                        <button class="action-btn" onclick="document.getElementById('import-file').click()">Import Settings</button>
+                        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importSettings(event)">
+                        <button class="action-btn danger" onclick="resetToDefaults()">Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disconnect Overlay -->
+    <div class="modal-overlay" id="disconnect-overlay">
+        <div class="disconnect-message">
+            <div class="disconnect-icon">--</div>
+            <h2>Server Disconnected</h2>
+            <p>The Pomodoro server has stopped.</p>
+            <p class="disconnect-hint">You can close this tab.</p>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        const state = {
+            mode: 'pomodoro',
+            timeRemaining: 25 * 60,
+            isRunning: false,
+            pomodorosInCycle: 0,  // 0-3, resets after long break
+            totalPomodoros: 0,
+            timerId: null,
+            animationId: null,
+            startTime: null,
+            startTimeRemaining: null,
+            sessionGoal: 4  // default target
+        };
+
+        const settings = {
+            pomodoroDuration: 25,
+            shortBreakDuration: 5,
+            longBreakDuration: 15,
+            autoStartBreaks: true,
+            autoStartPomodoros: false,
+            volume: 0.5,
+            sound: 'chime',
+            theme: 'mono',
+            timerStyle: 'flip',
+            colorBackground: true,
+            notifications: true
+        };
+
+
+        // Theme definitions
+        const themes = {
+            minimal: {
+                pomodoro: '#e57373',      // Soft red
+                shortBreak: '#81c784',    // Soft green
+                longBreak: '#64b5f6'      // Soft blue
+            },
+            mono: {
+                pomodoro: '#e0e0e0',      // Light gray
+                shortBreak: '#9e9e9e',    // Medium gray
+                longBreak: '#757575'      // Dark gray
+            },
+            warm: {
+                pomodoro: '#ff7043',      // Deep orange
+                shortBreak: '#ffb74d',    // Amber
+                longBreak: '#fff176'      // Yellow
+            },
+            cool: {
+                pomodoro: '#4fc3f7',      // Light blue
+                shortBreak: '#4dd0e1',    // Cyan
+                longBreak: '#80deea'      // Teal
+            },
+            violet: {
+                pomodoro: '#ba68c8',      // Purple
+                shortBreak: '#9575cd',    // Deep purple
+                longBreak: '#7986cb'      // Indigo
+            },
+            sunset: {
+                pomodoro: '#ff5722',      // Deep orange (sun)
+                shortBreak: '#ff7597',    // Pink (sky)
+                longBreak: '#7c4dff'      // Purple (twilight)
+            },
+            forest: {
+                pomodoro: '#66bb6a',      // Green (leaves)
+                shortBreak: '#a5d6a7',    // Light green (moss)
+                longBreak: '#8d6e63'      // Brown (bark)
+            },
+            ocean: {
+                pomodoro: '#26c6da',      // Cyan (shallow)
+                shortBreak: '#29b6f6',    // Light blue (mid)
+                longBreak: '#5c6bc0'      // Indigo (deep)
+            },
+            cyberpunk: {
+                pomodoro: '#39ff14',      // Neon green
+                shortBreak: '#00ffff',    // Neon cyan
+                longBreak: '#ff00ff'      // Neon pink
+            },
+            pastel: {
+                pomodoro: '#f8bbd9',      // Pink
+                shortBreak: '#c8e6c9',    // Green
+                longBreak: '#bbdefb'      // Blue
+            },
+            earth: {
+                pomodoro: '#8bc34a',      // Leaf green
+                shortBreak: '#4fc3f7',    // Sky blue
+                longBreak: '#8d6e63'      // Soil brown
+            },
+            berry: {
+                pomodoro: '#ff4d6d',      // Strawberry red
+                shortBreak: '#6c63ff',    // Blueberry
+                longBreak: '#2d1b69'      // Blackberry dark
+            },
+            coffee: {
+                pomodoro: '#d7ccc8',      // Cream
+                shortBreak: '#a1887f',    // Latte
+                longBreak: '#6d4c41'      // Espresso
+            },
+            aurora: {
+                pomodoro: '#69f0ae',      // Green glow
+                shortBreak: '#40c4ff',    // Blue glow
+                longBreak: '#e040fb'      // Purple glow
+            },
+            cherry: {
+                pomodoro: '#ff1744',      // Bright red
+                shortBreak: '#ff8a80',    // Light coral
+                longBreak: '#f8bbd9'      // Blossom pink
+            },
+            mint: {
+                pomodoro: '#1de9b6',      // Mint
+                shortBreak: '#64ffda',    // Light mint
+                longBreak: '#a7ffeb'      // Pale mint
+            }
+        };
+
+        // ===== THEME FUNCTIONS =====
+        function applyTheme(themeName) {
+            const theme = themes[themeName] || themes.minimal;
+            const root = document.documentElement;
+
+            // Set accent colors for each mode
+            root.style.setProperty('--pomodoro-accent', theme.pomodoro);
+            root.style.setProperty('--short-break-accent', theme.shortBreak);
+            root.style.setProperty('--long-break-accent', theme.longBreak);
+
+            // Update current accent based on mode
+            updateAccentForMode();
+        }
+
+        function updateAccentForMode() {
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+            let accentColor;
+
+            if (document.body.classList.contains('short-break')) {
+                accentColor = style.getPropertyValue('--short-break-accent').trim();
+            } else if (document.body.classList.contains('long-break')) {
+                accentColor = style.getPropertyValue('--long-break-accent').trim();
+            } else {
+                accentColor = style.getPropertyValue('--pomodoro-accent').trim();
+            }
+
+            root.style.setProperty('--accent', accentColor);
+        }
+
+        // ===== TIMER STYLE FUNCTIONS =====
+        function updateTimerStyle() {
+            const timerDisplay = document.getElementById('timer-display');
+            const timerCircular = document.getElementById('timer-circular');
+            const timerFlip = document.getElementById('timer-flip');
+
+            // Hide all timer displays
+            if (timerDisplay) timerDisplay.classList.add('hidden');
+            if (timerCircular) timerCircular.classList.remove('active');
+            if (timerFlip) timerFlip.classList.remove('active');
+
+            // Show the one matching settings.timerStyle
+            switch (settings.timerStyle) {
+                case 'minimal':
+                    if (timerDisplay) timerDisplay.classList.remove('hidden');
+                    break;
+                case 'circular':
+                    if (timerCircular) timerCircular.classList.add('active');
+                    break;
+                case 'flip':
+                    if (timerFlip) timerFlip.classList.add('active');
+                    break;
+                default:
+                    if (timerDisplay) timerDisplay.classList.remove('hidden');
+            }
+        }
+
+        function updateColorBackground() {
+            if (settings.colorBackground) {
+                document.body.classList.add('color-bg');
+            } else {
+                document.body.classList.remove('color-bg');
+            }
+        }
+
+        // ===== TIMER FUNCTIONS =====
+        function getDuration(mode) {
+            switch (mode) {
+                case 'pomodoro': return settings.pomodoroDuration * 60;
+                case 'shortBreak': return settings.shortBreakDuration * 60;
+                case 'longBreak': return settings.longBreakDuration * 60;
+                default: return 25 * 60;
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('timer-display');
+            const timeStr = formatTime(state.timeRemaining);
+            display.textContent = timeStr;
+
+            // Update tab title
+            const modeNames = {
+                pomodoro: 'Pomodoro',
+                shortBreak: 'Short Break',
+                longBreak: 'Long Break'
+            };
+            document.title = `${timeStr} - ${modeNames[state.mode]}`;
+
+            // Update favicon
+            updateFavicon(timeStr);
+
+            // Update circular timer display
+            const circularText = document.getElementById('timer-text-circular');
+            if (circularText) {
+                circularText.textContent = timeStr;
+            }
+
+            // Update circular progress ring (only when not running, animation handles it otherwise)
+            if (!state.isRunning) {
+                updateRingProgress(state.timeRemaining);
+            }
+
+            // Update flip clock digits with animation
+            updateFlipClock();
+        }
+
+        // Track previous flip clock values for animation
+        let prevFlipDigits = ['', '', '', ''];
+        let flipAnimationTimeouts = [];
+
+        function updateFlipClock() {
+            const mins = Math.floor(state.timeRemaining / 60);
+            const secs = state.timeRemaining % 60;
+            const minStr = mins.toString().padStart(2, '0');
+            const secStr = secs.toString().padStart(2, '0');
+            const newDigits = [minStr[0], minStr[1], secStr[0], secStr[1]];
+
+            const allCards = document.querySelectorAll('.flip-card');
+
+            newDigits.forEach((digit, index) => {
+                const card = allCards[index];
+                if (!card) return;
+
+                const oldDigit = prevFlipDigits[index];
+
+                if (oldDigit !== '' && oldDigit !== digit) {
+                    // Digit changed - trigger flip animation
+                    flipDigit(card, oldDigit, digit);
+                } else if (oldDigit === '') {
+                    // Initial load - just set the value
+                    setFlipCardValue(card, digit);
+                }
+            });
+
+            prevFlipDigits = newDigits;
+        }
+
+        function setFlipCardValue(card, digit) {
+            card.querySelector('.top span').textContent = digit;
+            card.querySelector('.bottom span').textContent = digit;
+            card.querySelector('.top-flip span').textContent = digit;
+            card.querySelector('.bottom-flip span').textContent = digit;
+        }
+
+        function clearFlipAnimations() {
+            // Clear all pending animation timeouts
+            flipAnimationTimeouts.forEach(id => clearTimeout(id));
+            flipAnimationTimeouts = [];
+            // Remove flipping class from all cards
+            document.querySelectorAll('.flip-card').forEach(card => {
+                card.classList.remove('flipping');
+            });
+        }
+
+        function flipDigit(card, oldDigit, newDigit) {
+            // Before animation starts - everything shows OLD
+            // - static top: OLD (visible)
+            // - static bottom: OLD (visible)
+            // - top-flip: OLD (covers static top, will flip away to reveal NEW)
+            // - bottom-flip: NEW (hidden at 90deg, will flip down to cover static bottom)
+
+            card.querySelector('.top span').textContent = oldDigit;
+            card.querySelector('.bottom span').textContent = oldDigit;
+            card.querySelector('.top-flip span').textContent = oldDigit;
+            card.querySelector('.bottom-flip span').textContent = newDigit;
+
+            // Remove any existing animation class
+            card.classList.remove('flipping');
+
+            // Force reflow to restart animation
+            void card.offsetWidth;
+
+            // Start the flip
+            card.classList.add('flipping');
+
+            // Halfway through: update static top to new value (top-flip has flipped past 90deg)
+            flipAnimationTimeouts.push(setTimeout(() => {
+                card.querySelector('.top span').textContent = newDigit;
+            }, 150));
+
+            // When bottom-flip lands: update static bottom to new value
+            flipAnimationTimeouts.push(setTimeout(() => {
+                card.querySelector('.bottom span').textContent = newDigit;
+            }, 400));
+
+            // Clean up after animation completes
+            flipAnimationTimeouts.push(setTimeout(() => {
+                card.classList.remove('flipping');
+                card.querySelector('.top-flip span').textContent = newDigit;
+            }, 450));
+        }
+
+        function updateFavicon(timeStr) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+
+            // Background color based on mode and current theme
+            const theme = themes[settings.theme] || themes.classic;
+            const colors = {
+                pomodoro: theme.pomodoro,
+                shortBreak: theme.shortBreak,
+                longBreak: theme.longBreak
+            };
+
+            ctx.fillStyle = colors[state.mode];
+            ctx.beginPath();
+            ctx.arc(16, 16, 16, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const mins = Math.floor(state.timeRemaining / 60);
+            ctx.fillText(mins.toString(), 16, 16);
+
+            // Update favicon
+            const link = document.querySelector("link[rel='icon']");
+            link.href = canvas.toDataURL();
+        }
+
+        function updateSessionCounter() {
+            const counter = document.getElementById('session-counter');
+            if (state.mode === 'pomodoro') {
+                counter.textContent = `Study ${state.pomodorosInCycle + 1}`;
+            } else if (state.mode === 'shortBreak') {
+                counter.textContent = `Break ${state.pomodorosInCycle}`;
+            } else {
+                counter.textContent = 'Long Break';
+            }
+        }
+
+        function switchMode(mode, autoStart = false) {
+            // Clear any existing timer
+            if (state.timerId) {
+                clearInterval(state.timerId);
+                state.timerId = null;
+            }
+
+            state.mode = mode;
+            state.timeRemaining = getDuration(mode);
+            state.isRunning = false;
+
+            // Clear any pending flip animations and reset tracking
+            clearFlipAnimations();
+            prevFlipDigits = ['', '', '', ''];
+
+            // Update UI
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mode === mode);
+            });
+
+            // Update body class for colors (preserve color-bg class)
+            document.body.classList.remove('short-break', 'long-break');
+            if (mode !== 'pomodoro') {
+                document.body.classList.add(mode.replace('B', '-b'));
+            }
+
+            // Update theme accent for current mode
+            updateAccentForMode();
+
+            updateDisplay();
+            updateStartButton();
+            updateSessionCounter();
+
+            // Auto-start if enabled
+            if (autoStart) {
+                const shouldAutoStart = mode === 'pomodoro'
+                    ? settings.autoStartPomodoros
+                    : settings.autoStartBreaks;
+                if (shouldAutoStart) {
+                    startTimer();
+                }
+            }
+        }
+
+        function startTimer() {
+            if (state.isRunning) return;
+
+            // Clear any existing timer just in case
+            if (state.timerId) {
+                clearInterval(state.timerId);
+            }
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+
+            state.isRunning = true;
+            state.startTime = Date.now();
+            state.startTimeRemaining = state.timeRemaining;
+            updateStartButton();
+
+            // Smooth ring animation
+            function animateRing() {
+                if (!state.isRunning) return;
+
+                const elapsed = (Date.now() - state.startTime) / 1000;
+                const smoothTimeRemaining = Math.max(0, state.startTimeRemaining - elapsed);
+
+                // Update ring smoothly
+                updateRingProgress(smoothTimeRemaining);
+
+                if (state.isRunning) {
+                    state.animationId = requestAnimationFrame(animateRing);
+                }
+            }
+            state.animationId = requestAnimationFrame(animateRing);
+
+            // 1-second interval for text display and completion check
+            state.timerId = setInterval(() => {
+                state.timeRemaining--;
+                updateDisplay();
+
+                if (state.timeRemaining <= 0) {
+                    onTimerComplete();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            if (!state.isRunning) return;
+
+            state.isRunning = false;
+            clearInterval(state.timerId);
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+                state.animationId = null;
+            }
+            updateStartButton();
+        }
+
+        function updateRingProgress(timeRemaining) {
+            const ringProgress = document.getElementById('ring-progress');
+            if (ringProgress) {
+                const totalDuration = getDuration(state.mode);
+                const circumference = 283; // 2 * PI * 45
+                const offset = circumference * (1 - timeRemaining / totalDuration);
+                ringProgress.setAttribute('stroke-dashoffset', offset);
+            }
+        }
+
+        function toggleTimer() {
+            if (state.isRunning) {
+                pauseTimer();
+            } else {
+                requestNotificationPermission();
+                startTimer();
+            }
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            state.timeRemaining = getDuration(state.mode);
+            // Clear any pending flip animations and reset tracking
+            clearFlipAnimations();
+            prevFlipDigits = ['', '', '', ''];
+            updateDisplay();
+        }
+
+        function skipTimer() {
+            pauseTimer();
+
+            // If skipping a pomodoro, count it as completed
+            if (state.mode === 'pomodoro') {
+                state.pomodorosInCycle++;
+                state.totalPomodoros++;
+                updateSessionCounter();
+                updateSessionCount();
+                updateGoalDisplay();
+                saveState();
+            }
+
+            advanceToNextMode();
+        }
+
+        function updateStartButton() {
+            const btn = document.getElementById('start-btn');
+            btn.textContent = state.isRunning ? 'Pause' : 'Start';
+        }
+
+        function onTimerComplete() {
+            pauseTimer();
+            playNotification();
+
+            if (state.mode === 'pomodoro') {
+                // Completed a pomodoro
+                state.pomodorosInCycle++;
+                state.totalPomodoros++;
+
+                updateSessionCounter();
+                saveState();
+                updateSessionCount();
+                updateGoalDisplay();
+                showBrowserNotification('Pomodoro Complete!', 'Time for a break');
+            } else {
+                showBrowserNotification('Break Over!', 'Ready to focus?');
+            }
+
+            advanceToNextMode();
+        }
+
+        function advanceToNextMode() {
+            if (state.mode === 'pomodoro') {
+                // After pomodoro, go to break
+                if (state.pomodorosInCycle >= 4) {
+                    // Long break after 4 pomodoros
+                    state.pomodorosInCycle = 0;
+                    updateSessionCounter();
+                    switchMode('longBreak', true);
+                } else {
+                    switchMode('shortBreak', true);
+                }
+            } else {
+                // After break, go to pomodoro
+                switchMode('pomodoro', true);
+            }
+        }
+
+        // ===== BROWSER NOTIFICATIONS =====
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                return;
+            }
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function showBrowserNotification(title, body) {
+            if (!settings.notifications) {
+                return;
+            }
+            if (!('Notification' in window)) {
+                return;
+            }
+            if (Notification.permission !== 'granted') {
+                return;
+            }
+            new Notification(title, { body: body });
+        }
+
+        // ===== SESSION COUNT DISPLAY =====
+        function updateSessionCount() {
+            document.getElementById('streak-count').textContent = state.totalPomodoros;
+        }
+
+        // ===== GOAL FUNCTIONS =====
+        function loadGoal() {
+            const saved = localStorage.getItem('pomodoro-goal');
+            if (saved) {
+                state.sessionGoal = parseInt(saved) || 4;
+            } else {
+                state.sessionGoal = 4;
+            }
+        }
+
+        function saveGoal() {
+            localStorage.setItem('pomodoro-goal', state.sessionGoal.toString());
+        }
+
+        function adjustGoal(delta) {
+            state.sessionGoal += delta;
+            // Clamp between 1 and 20
+            if (state.sessionGoal < 1) state.sessionGoal = 1;
+            if (state.sessionGoal > 20) state.sessionGoal = 20;
+            saveGoal();
+            updateGoalDisplay();
+        }
+
+        function updateGoalDisplay() {
+            document.getElementById('goal-target').textContent = state.sessionGoal;
+            document.getElementById('goal-current').textContent = state.totalPomodoros;
+            // Add visual indicator if goal is reached
+            const goalDisplay = document.querySelector('.goal-display');
+            if (state.totalPomodoros >= state.sessionGoal) {
+                goalDisplay.classList.add('goal-reached');
+            } else {
+                goalDisplay.classList.remove('goal-reached');
+            }
+        }
+
+        // ===== AUDIO =====
+        let audioContext = null;
+
+        function playNotification(isTest = false) {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const volume = settings.volume;
+                if (volume === 0) return;
+
+                const now = audioContext.currentTime;
+
+                switch (settings.sound) {
+                    case 'chime':
+                        playChimeSound(now, volume);
+                        break;
+                    case 'digital':
+                        playDigitalSound(now, volume);
+                        break;
+                    case 'gong':
+                        playGongSound(now, volume);
+                        break;
+                    case 'melody':
+                        playMelodySound(now, volume);
+                        break;
+                    default:
+                        playChimeSound(now, volume);
+                }
+            } catch (e) {
+                console.log('Audio not available:', e);
+            }
+        }
+
+        function playChimeSound(now, volume) {
+            // Sine wave chord: C5, E5, G5
+            const frequencies = [523.25, 659.25, 783.99];
+
+            frequencies.forEach((freq, i) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+
+                gainNode.gain.setValueAtTime(0, now + i * 0.1);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.3, now + i * 0.1 + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.8);
+
+                oscillator.start(now + i * 0.1);
+                oscillator.stop(now + i * 0.1 + 0.8);
+            });
+        }
+
+        function playDigitalSound(now, volume) {
+            // 3 short beeps at 880Hz with square wave
+            for (let i = 0; i < 3; i++) {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = 'square';
+                oscillator.frequency.value = 880;
+
+                const startTime = now + i * 0.2; // 0.1s on, 0.1s off
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.2, startTime + 0.01);
+                gainNode.gain.setValueAtTime(volume * 0.2, startTime + 0.09);
+                gainNode.gain.linearRampToValueAtTime(0, startTime + 0.1);
+
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.1);
+            }
+        }
+
+        function playGongSound(now, volume) {
+            // Deep resonant gong: A2 (110Hz) with harmonics at 220Hz and 330Hz
+            const frequencies = [110, 220, 330];
+            const gains = [1, 0.5, 0.25]; // Decreasing gain for harmonics
+
+            frequencies.forEach((freq, i) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+
+                const peakGain = volume * 0.4 * gains[i];
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(peakGain, now + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 2);
+
+                oscillator.start(now);
+                oscillator.stop(now + 2);
+            });
+        }
+
+        function playMelodySound(now, volume) {
+            // Ascending notes: C5, E5, G5, C6
+            const frequencies = [523, 659, 784, 1047];
+
+            frequencies.forEach((freq, i) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+
+                const startTime = now + i * 0.12; // Slight overlap (0.15s notes, 0.12s spacing)
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.3, startTime + 0.02);
+                gainNode.gain.setValueAtTime(volume * 0.3, startTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.15);
+            });
+        }
+
+        // ===== SETTINGS =====
+        function openSettings() {
+            document.getElementById('settings-modal').classList.add('active');
+            generateThemeGrid();
+            loadSettingsToForm();
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.remove('active');
+            saveSettingsFromForm();
+        }
+
+        function loadSettingsToForm() {
+            document.getElementById('setting-timer-style').value = settings.timerStyle;
+            document.getElementById('setting-color-bg').checked = settings.colorBackground;
+            document.getElementById('setting-pomodoro').value = settings.pomodoroDuration;
+            document.getElementById('setting-short-break').value = settings.shortBreakDuration;
+            document.getElementById('setting-long-break').value = settings.longBreakDuration;
+            document.getElementById('setting-auto-breaks').checked = settings.autoStartBreaks;
+            document.getElementById('setting-auto-pomodoros').checked = settings.autoStartPomodoros;
+            document.getElementById('setting-sound').value = settings.sound;
+            document.getElementById('setting-volume').value = settings.volume * 100;
+            document.getElementById('volume-value').textContent = Math.round(settings.volume * 100) + '%';
+            document.getElementById('setting-notifications').checked = settings.notifications;
+        }
+
+        function saveSettingsFromForm() {
+            const oldPomodoro = settings.pomodoroDuration;
+            const oldShort = settings.shortBreakDuration;
+            const oldLong = settings.longBreakDuration;
+            const oldTimerStyle = settings.timerStyle;
+            const oldColorBackground = settings.colorBackground;
+
+            settings.timerStyle = document.getElementById('setting-timer-style').value;
+            settings.colorBackground = document.getElementById('setting-color-bg').checked;
+            settings.pomodoroDuration = parseInt(document.getElementById('setting-pomodoro').value) || 25;
+            settings.shortBreakDuration = parseInt(document.getElementById('setting-short-break').value) || 5;
+            settings.longBreakDuration = parseInt(document.getElementById('setting-long-break').value) || 15;
+            settings.autoStartBreaks = document.getElementById('setting-auto-breaks').checked;
+            settings.autoStartPomodoros = document.getElementById('setting-auto-pomodoros').checked;
+            settings.sound = document.getElementById('setting-sound').value;
+            settings.volume = parseInt(document.getElementById('setting-volume').value) / 100;
+            settings.notifications = document.getElementById('setting-notifications').checked;
+
+            // Apply timer style if changed
+            if (oldTimerStyle !== settings.timerStyle) {
+                updateTimerStyle();
+            }
+
+            // Apply color background if changed
+            if (oldColorBackground !== settings.colorBackground) {
+                updateColorBackground();
+            }
+
+            saveSettings();
+
+            // Reset timer if duration changed and timer is not running
+            if (!state.isRunning) {
+                const durationChanged =
+                    (state.mode === 'pomodoro' && oldPomodoro !== settings.pomodoroDuration) ||
+                    (state.mode === 'shortBreak' && oldShort !== settings.shortBreakDuration) ||
+                    (state.mode === 'longBreak' && oldLong !== settings.longBreakDuration);
+
+                if (durationChanged) {
+                    state.timeRemaining = getDuration(state.mode);
+                    updateDisplay();
+                }
+            }
+        }
+
+        // Volume slider live update
+        document.getElementById('setting-volume').addEventListener('input', function() {
+            document.getElementById('volume-value').textContent = this.value + '%';
+        });
+
+        // Generate theme grid
+        function generateThemeGrid() {
+            const grid = document.getElementById('theme-grid');
+            grid.innerHTML = '';
+
+            Object.keys(themes).forEach(themeName => {
+                const theme = themes[themeName];
+                const swatch = document.createElement('div');
+                swatch.className = 'theme-swatch' + (settings.theme === themeName ? ' active' : '');
+                swatch.dataset.theme = themeName;
+
+                swatch.innerHTML = `
+                    <div class="swatch-colors">
+                        <div class="swatch-color" style="background: ${theme.pomodoro}"></div>
+                        <div class="swatch-color" style="background: ${theme.shortBreak}"></div>
+                        <div class="swatch-color" style="background: ${theme.longBreak}"></div>
+                    </div>
+                    <div class="swatch-name">${themeName}</div>
+                `;
+
+                // Hover to preview
+                swatch.addEventListener('mouseenter', () => {
+                    applyTheme(themeName);
+                });
+
+                // Mouse leave - revert to selected theme
+                swatch.addEventListener('mouseleave', () => {
+                    applyTheme(settings.theme);
+                });
+
+                // Click to select
+                swatch.addEventListener('click', () => {
+                    settings.theme = themeName;
+                    applyTheme(themeName);
+                    saveSettings();
+                    updateThemeGridActive();
+                });
+
+                grid.appendChild(swatch);
+            });
+        }
+
+        function updateThemeGridActive() {
+            document.querySelectorAll('.theme-swatch').forEach(swatch => {
+                swatch.classList.toggle('active', swatch.dataset.theme === settings.theme);
+            });
+        }
+
+        // Timer style live update
+        document.getElementById('setting-timer-style').addEventListener('change', function() {
+            settings.timerStyle = this.value;
+            updateTimerStyle();
+            saveSettings();
+        });
+
+        // Color background live update
+        document.getElementById('setting-color-bg').addEventListener('change', function() {
+            settings.colorBackground = this.checked;
+            updateColorBackground();
+            saveSettings();
+        });
+
+        // Sound live update (so test button uses selected sound)
+        document.getElementById('setting-sound').addEventListener('change', function() {
+            settings.sound = this.value;
+            saveSettings();
+        });
+
+        // ===== LOCAL STORAGE =====
+        function saveSettings() {
+            localStorage.setItem('pomodoro-settings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('pomodoro-settings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+            }
+        }
+
+        // ===== EXPORT / IMPORT / RESET =====
+        function exportSettings() {
+            const exportData = {
+                settings: settings,
+                goal: state.sessionGoal,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pomodoro-settings.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importSettings(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    // Validate and apply settings
+                    if (data.settings) {
+                        Object.assign(settings, data.settings);
+                        saveSettings();
+                    }
+
+                    if (data.goal) {
+                        state.sessionGoal = data.goal;
+                        saveGoal();
+                    }
+
+                    // Apply all settings
+                    applyTheme(settings.theme);
+                    updateTimerStyle();
+                    updateColorBackground();
+                    loadSettingsToForm();
+                    updateGoalDisplay();
+
+                    alert('Settings imported successfully!');
+                } catch (err) {
+                    alert('Invalid settings file. Please check the format.');
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset file input so same file can be imported again
+            event.target.value = '';
+        }
+
+        function resetToDefaults() {
+            if (!confirm('Reset all settings to defaults? This cannot be undone.')) {
+                return;
+            }
+
+            // Default settings
+            const defaults = {
+                pomodoroDuration: 25,
+                shortBreakDuration: 5,
+                longBreakDuration: 15,
+                autoStartBreaks: true,
+                autoStartPomodoros: false,
+                volume: 0.5,
+                sound: 'chime',
+                theme: 'mono',
+                timerStyle: 'flip',
+                colorBackground: true,
+                notifications: true
+            };
+
+            Object.assign(settings, defaults);
+            state.sessionGoal = 4;
+
+            saveSettings();
+            saveGoal();
+
+            // Apply all settings
+            applyTheme(settings.theme);
+            updateTimerStyle();
+            updateColorBackground();
+            loadSettingsToForm();
+            updateGoalDisplay();
+
+            // Reset timer to new duration
+            if (!state.isRunning) {
+                state.timeRemaining = getDuration(state.mode);
+                updateDisplay();
+            }
+        }
+
+        function saveState() {
+            const stateToSave = {
+                pomodorosInCycle: state.pomodorosInCycle,
+                totalPomodoros: state.totalPomodoros
+            };
+            localStorage.setItem('pomodoro-state', JSON.stringify(stateToSave));
+        }
+
+        function loadState() {
+            // Always start fresh on page load
+            state.pomodorosInCycle = 0;
+            state.totalPomodoros = 0;
+        }
+
+        // ===== KEYBOARD SHORTCUTS =====
+        document.addEventListener('keydown', function(e) {
+            // Don't trigger if typing in input or modal is open
+            if (e.target.tagName === 'INPUT') return;
+            if (document.getElementById('settings-modal').classList.contains('active')) return;
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    toggleTimer();
+                    break;
+                case 'KeyR':
+                    e.preventDefault();
+                    resetTimer();
+                    break;
+                case 'KeyN':
+                    e.preventDefault();
+                    skipTimer();
+                    break;
+            }
+        });
+
+        // ===== HEARTBEAT =====
+        let heartbeatFailures = 0;
+        const MAX_FAILURES = 2;
+
+        async function sendHeartbeat() {
+            try {
+                const response = await fetch('/heartbeat', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                if (response.ok) {
+                    heartbeatFailures = 0;
+                } else {
+                    handleHeartbeatFailure();
+                }
+            } catch (e) {
+                handleHeartbeatFailure();
+            }
+        }
+
+        function handleHeartbeatFailure() {
+            heartbeatFailures++;
+            if (heartbeatFailures >= MAX_FAILURES) {
+                showDisconnected();
+            }
+        }
+
+        function showDisconnected() {
+            // Try to close the window first
+            window.close();
+
+            // If we're still here, window.close() didn't work - show overlay
+            document.getElementById('disconnect-overlay').classList.add('active');
+
+            // Stop the timer
+            pauseTimer();
+        }
+
+        setInterval(sendHeartbeat, 2000);
+
+        window.addEventListener('beforeunload', () => {
+            navigator.sendBeacon('/shutdown');
+        });
+
+        // Close modal on overlay click
+        document.getElementById('settings-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSettings();
+            }
+        });
+
+        // ===== INITIALIZATION =====
+        function init() {
+            loadSettings();
+            loadState();
+            loadGoal();
+
+            // Apply saved theme
+            applyTheme(settings.theme);
+
+            // Apply saved timer style and color background
+            updateTimerStyle();
+            updateColorBackground();
+
+            state.timeRemaining = getDuration(state.mode);
+            updateDisplay();
+            updateSessionCounter();
+            updateGoalDisplay();
+            updateSessionCount();
+
+            // Initialize flip clock values
+            prevFlipDigits = ['', '', '', ''];
+            updateFlipClock();
+        }
+
+        init();
+    </script>
+</body>
+</html>
