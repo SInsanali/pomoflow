@@ -1326,7 +1326,7 @@ Space: start/pause  ||  R: reset  ||  N: next
         };
 
 
-        // Theme definitions (10 built-in themes)
+        // Theme definitions (17 built-in themes)
         const themes = {
             mono: {
                 pomodoro: '#e0e0e0',
@@ -1371,12 +1371,47 @@ Space: start/pause  ||  R: reset  ||  N: next
             cherry: {
                 pomodoro: '#ff1744',
                 shortBreak: '#ff8a80',
-                longBreak: '#f8bbd9'
+                longBreak: '#e91e63'
             },
             mint: {
                 pomodoro: '#1de9b6',
                 shortBreak: '#64ffda',
-                longBreak: '#a7ffeb'
+                longBreak: '#00bfa5'
+            },
+            dusk: {
+                pomodoro: '#e86a2c',
+                shortBreak: '#4a90d9',
+                longBreak: '#f5a167'
+            },
+            terracotta: {
+                pomodoro: '#c62828',
+                shortBreak: '#ff7043',
+                longBreak: '#ffccbc'
+            },
+            glacier: {
+                pomodoro: '#1565c0',
+                shortBreak: '#00acc1',
+                longBreak: '#4fc3f7'
+            },
+            nebula: {
+                pomodoro: '#8e24aa',
+                shortBreak: '#e91e63',
+                longBreak: '#b0bec5'
+            },
+            jade: {
+                pomodoro: '#00897b',
+                shortBreak: '#4db6ac',
+                longBreak: '#b2dfdb'
+            },
+            honey: {
+                pomodoro: '#f9a825',
+                shortBreak: '#ffca28',
+                longBreak: '#d4a017'
+            },
+            blossom: {
+                pomodoro: '#d81b60',
+                shortBreak: '#f48fb1',
+                longBreak: '#c2185b'
             }
         };
 
@@ -2346,6 +2381,11 @@ Space: start/pause  ||  R: reset  ||  N: next
             const saved = localStorage.getItem('pomodoro-settings');
             if (saved) {
                 Object.assign(settings, JSON.parse(saved));
+                // Validate theme exists, fallback to mono if not
+                if (!themes[settings.theme] && !customThemes[settings.theme]) {
+                    settings.theme = 'mono';
+                    saveSettings();
+                }
             }
         }
 
