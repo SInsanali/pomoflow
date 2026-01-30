@@ -1146,17 +1146,16 @@ Space: start/pause  ||  R: reset  ||  N: next
         function updateAccentForMode() {
             const root = document.documentElement;
             const style = getComputedStyle(root);
-            let accentColor;
+            const body = document.body;
 
-            if (document.body.classList.contains('short-break')) {
-                accentColor = style.getPropertyValue('--short-break-accent').trim();
-            } else if (document.body.classList.contains('long-break')) {
-                accentColor = style.getPropertyValue('--long-break-accent').trim();
-            } else {
-                accentColor = style.getPropertyValue('--pomodoro-accent').trim();
+            let cssVar = '--pomodoro-accent';
+            if (body.classList.contains('short-break')) {
+                cssVar = '--short-break-accent';
+            } else if (body.classList.contains('long-break')) {
+                cssVar = '--long-break-accent';
             }
 
-            root.style.setProperty('--accent', accentColor);
+            root.style.setProperty('--accent', style.getPropertyValue(cssVar).trim());
         }
 
         // ===== TIMER STYLE FUNCTIONS =====
@@ -1170,11 +1169,8 @@ Space: start/pause  ||  R: reset  ||  N: next
             if (timerCircular) timerCircular.classList.remove('active');
             if (timerFlip) timerFlip.classList.remove('active');
 
-            // Show the one matching settings.timerStyle
+            // Show the selected timer style
             switch (settings.timerStyle) {
-                case 'minimal':
-                    if (timerDisplay) timerDisplay.classList.remove('hidden');
-                    break;
                 case 'circular':
                     if (timerCircular) timerCircular.classList.add('active');
                     break;
@@ -1187,11 +1183,7 @@ Space: start/pause  ||  R: reset  ||  N: next
         }
 
         function updateColorBackground() {
-            if (settings.colorBackground) {
-                document.body.classList.add('color-bg');
-            } else {
-                document.body.classList.remove('color-bg');
-            }
+            document.body.classList.toggle('color-bg', settings.colorBackground);
         }
 
         // ===== TIMER FUNCTIONS =====
@@ -1362,12 +1354,16 @@ Space: start/pause  ||  R: reset  ||  N: next
 
         function updateSessionCounter() {
             const counter = document.getElementById('session-counter');
-            if (state.mode === 'pomodoro') {
-                counter.textContent = `Study ${state.pomodorosInCycle + 1}`;
-            } else if (state.mode === 'shortBreak') {
-                counter.textContent = `Break ${state.pomodorosInCycle}`;
-            } else {
-                counter.textContent = 'Long Break';
+            switch (state.mode) {
+                case 'pomodoro':
+                    counter.textContent = `Study ${state.pomodorosInCycle + 1}`;
+                    break;
+                case 'shortBreak':
+                    counter.textContent = `Break ${state.pomodorosInCycle}`;
+                    break;
+                case 'longBreak':
+                    counter.textContent = 'Long Break';
+                    break;
             }
         }
 
@@ -1559,25 +1555,19 @@ Space: start/pause  ||  R: reset  ||  N: next
 
         // ===== BROWSER NOTIFICATIONS =====
         function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                return;
-            }
-            if (Notification.permission === 'default') {
+            if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
         }
 
         function showBrowserNotification(title, body) {
-            if (!settings.notifications) {
-                return;
+            const canNotify = settings.notifications &&
+                'Notification' in window &&
+                Notification.permission === 'granted';
+
+            if (canNotify) {
+                new Notification(title, { body });
             }
-            if (!('Notification' in window)) {
-                return;
-            }
-            if (Notification.permission !== 'granted') {
-                return;
-            }
-            new Notification(title, { body: body });
         }
 
         // ===== SESSION COUNT DISPLAY =====
@@ -1588,22 +1578,15 @@ Space: start/pause  ||  R: reset  ||  N: next
         // ===== GOAL FUNCTIONS =====
         function loadGoal() {
             const saved = localStorage.getItem('pomodoro-goal');
-            if (saved) {
-                state.sessionGoal = parseInt(saved) || 4;
-            } else {
-                state.sessionGoal = 4;
-            }
+            state.sessionGoal = (saved && parseInt(saved)) || 4;
         }
 
         function saveGoal() {
-            localStorage.setItem('pomodoro-goal', state.sessionGoal.toString());
+            localStorage.setItem('pomodoro-goal', String(state.sessionGoal));
         }
 
         function adjustGoal(delta) {
-            state.sessionGoal += delta;
-            // Clamp between 1 and 20
-            if (state.sessionGoal < 1) state.sessionGoal = 1;
-            if (state.sessionGoal > 20) state.sessionGoal = 20;
+            state.sessionGoal = Math.max(1, Math.min(20, state.sessionGoal + delta));
             saveGoal();
             updateGoalDisplay();
         }
@@ -1611,17 +1594,19 @@ Space: start/pause  ||  R: reset  ||  N: next
         function updateGoalDisplay() {
             document.getElementById('goal-target').textContent = state.sessionGoal;
             document.getElementById('goal-current').textContent = state.totalPomodoros;
-            // Add visual indicator if goal is reached
             const goalDisplay = document.querySelector('.goal-display');
-            if (state.totalPomodoros >= state.sessionGoal) {
-                goalDisplay.classList.add('goal-reached');
-            } else {
-                goalDisplay.classList.remove('goal-reached');
-            }
+            goalDisplay.classList.toggle('goal-reached', state.totalPomodoros >= state.sessionGoal);
         }
 
         // ===== AUDIO =====
         let audioContext = null;
+
+        const soundFunctions = {
+            chime: playChimeSound,
+            digital: playDigitalSound,
+            gong: playGongSound,
+            melody: playMelodySound
+        };
 
         function playNotification(isTest = false) {
             try {
@@ -1632,24 +1617,8 @@ Space: start/pause  ||  R: reset  ||  N: next
                 const volume = settings.volume;
                 if (volume === 0) return;
 
-                const now = audioContext.currentTime;
-
-                switch (settings.sound) {
-                    case 'chime':
-                        playChimeSound(now, volume);
-                        break;
-                    case 'digital':
-                        playDigitalSound(now, volume);
-                        break;
-                    case 'gong':
-                        playGongSound(now, volume);
-                        break;
-                    case 'melody':
-                        playMelodySound(now, volume);
-                        break;
-                    default:
-                        playChimeSound(now, volume);
-                }
+                const playSound = soundFunctions[settings.sound] || playChimeSound;
+                playSound(audioContext.currentTime, volume);
             } catch (e) {
                 console.log('Audio not available:', e);
             }
@@ -2006,38 +1975,33 @@ Space: start/pause  ||  R: reset  ||  N: next
         }
 
         function saveState() {
-            const stateToSave = {
+            localStorage.setItem('pomodoro-state', JSON.stringify({
                 pomodorosInCycle: state.pomodorosInCycle,
                 totalPomodoros: state.totalPomodoros
-            };
-            localStorage.setItem('pomodoro-state', JSON.stringify(stateToSave));
+            }));
         }
 
         function loadState() {
-            // Always start fresh on page load
             state.pomodorosInCycle = 0;
             state.totalPomodoros = 0;
         }
 
         // ===== KEYBOARD SHORTCUTS =====
-        document.addEventListener('keydown', function(e) {
-            // Don't trigger if typing in input or modal is open
-            if (e.target.tagName === 'INPUT') return;
-            if (document.getElementById('settings-modal').classList.contains('active')) return;
+        const keyboardShortcuts = {
+            'Space': toggleTimer,
+            'KeyR': resetTimer,
+            'KeyN': skipTimer
+        };
 
-            switch (e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    toggleTimer();
-                    break;
-                case 'KeyR':
-                    e.preventDefault();
-                    resetTimer();
-                    break;
-                case 'KeyN':
-                    e.preventDefault();
-                    skipTimer();
-                    break;
+        document.addEventListener('keydown', function(e) {
+            const isTyping = e.target.tagName === 'INPUT';
+            const isModalOpen = document.getElementById('settings-modal').classList.contains('active');
+            if (isTyping || isModalOpen) return;
+
+            const action = keyboardShortcuts[e.code];
+            if (action) {
+                e.preventDefault();
+                action();
             }
         });
 
