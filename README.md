@@ -8,9 +8,9 @@ No dependencies. No accounts. No tracking. Just focus.
 
 - **Timer modes**: Pomodoro (25 min), Short Break (5 min), Long Break (15 min)
 - **Timer styles**: Minimal, Circular progress (smooth animation), Flip clock (animated)
-- **17 color themes**: Recent themes for quick access, expandable grid to browse all
+- **17 color themes**: 4 recent themes for quick access, expandable grid to browse all
 - **Custom themes**: Create your own with color pickers for each timer mode
-- **Appearance options**: Color background toggle, dark background when running
+- **Appearance options**: Color background toggle, dark background when timer is running
 - **Keyboard shortcuts**: Space (start/pause), R (reset), N (next)
 - **Session tracking**: Goal counter, completed count
 - **Export/Import**: Save and share your settings (including custom themes) as JSON
