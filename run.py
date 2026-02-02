@@ -239,11 +239,31 @@ def signal_handler(signum, frame):
     initiate_shutdown(f"Received {signal_name}")
 
 
+def is_wsl():
+    """Check if running in Windows Subsystem for Linux."""
+    try:
+        with open('/proc/version', 'r') as f:
+            return 'microsoft' in f.read().lower()
+    except:
+        return False
+
+
 def open_browser(url):
     """Open browser after a short delay to ensure server is ready."""
     time.sleep(0.5)
 
-    # Use default browser - more reliable than forcing Chrome
+    if is_wsl():
+        # WSL: Use Windows browser via cmd.exe
+        import subprocess
+        try:
+            # cmd.exe /c start opens URL in default Windows browser
+            subprocess.run(['cmd.exe', '/c', 'start', url.replace('&', '^&')],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except Exception:
+            pass
+
+    # macOS, Windows, or native Linux with browser installed
     webbrowser.open(url)
 
 
