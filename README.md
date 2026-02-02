@@ -2,15 +2,17 @@
 
 Minimalist Pomodoro timer with a local Python server that auto-exits when you close the tab.
 
-No dependencies. No accounts. No tracking. Just focus.
+No dependencies. No accounts. No tracking. Works offline. Just focus.
 
 ## Features
 
 - **Timer modes**: Pomodoro (25 min), Short Break (5 min), Long Break (15 min)
 - **Timer styles**: Minimal, Circular progress (smooth animation), Flip clock (animated)
+- **Timer fonts**: 7 built-in fonts (Inter, Poppins, Montserrat, Raleway, JetBrains Mono, Space Mono, Orbitron)
 - **17 color themes**: 4 recent themes for quick access, expandable grid to browse all
 - **Custom themes**: Create your own with color pickers for each timer mode
 - **Appearance options**: Color background toggle, dark background when timer is running
+- **Cross-platform**: Works on Windows, macOS, Linux, and WSL
 - **Keyboard shortcuts**: Space (start/pause), R (reset), N (next)
 - **Session tracking**: Goal counter, completed count
 - **Export/Import**: Save and share your settings (including custom themes) as JSON
