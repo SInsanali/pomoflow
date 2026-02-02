@@ -6,6 +6,57 @@
     <title>25:00 - Pomodoro</title>
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <style>
+        /* Local Font Faces */
+        @font-face {
+            font-family: 'Inter';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/inter-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/poppins-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Montserrat';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/montserrat-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Raleway';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/raleway-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'JetBrains Mono';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/jetbrains-mono-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Space Mono';
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/space-mono-400.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Orbitron';
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+            src: url('fonts/orbitron-500.woff2') format('woff2');
+        }
+
         /* CSS Variables */
         :root {
             --bg-primary: #0d0d0d;
@@ -141,8 +192,9 @@
 
         /* Timer Display - Minimal Style */
         .timer-display {
+            font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
             font-size: 7rem;
-            font-weight: 100;
+            font-weight: 500;
             letter-spacing: 2px;
             margin-bottom: 50px;
             font-variant-numeric: tabular-nums;
@@ -169,7 +221,7 @@
         .timer-ring {
             width: 100%;
             height: 100%;
-            transform: rotate(-90deg);
+            transform: rotate(-87deg);
         }
         .timer-ring .ring-bg {
             fill: none;
@@ -180,12 +232,13 @@
             fill: none;
             stroke: var(--accent);
             stroke-width: 8;
-            stroke-linecap: butt;
+            stroke-linecap: round;
         }
         .timer-circular .timer-text {
             position: absolute;
-            font-size: 3.5rem;
-            font-weight: 100;
+            font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+            font-size: 3rem;
+            font-weight: 500;
             color: var(--accent);
             font-variant-numeric: tabular-nums;
         }
@@ -232,8 +285,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
             font-size: 3.5rem;
-            font-weight: 200;
+            font-weight: 500;
             color: var(--accent);
             overflow: hidden;
             backface-visibility: hidden;
@@ -1275,6 +1329,19 @@ Space: start/pause  ||  R: reset  ||  N: next
                         </select>
                     </div>
                     <div class="setting-row">
+                        <label>Timer Font</label>
+                        <select id="setting-font" class="theme-select">
+                            <option value="system">System</option>
+                            <option value="inter">Inter</option>
+                            <option value="poppins">Poppins</option>
+                            <option value="montserrat">Montserrat</option>
+                            <option value="raleway">Raleway</option>
+                            <option value="jetbrains">JetBrains Mono</option>
+                            <option value="space">Space Mono</option>
+                            <option value="orbitron">Orbitron</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
                         <label>Color Background</label>
                         <label class="toggle">
                             <input type="checkbox" id="setting-color-bg" checked>
@@ -1406,6 +1473,7 @@ Space: start/pause  ||  R: reset  ||  N: next
             theme: 'mono',
             recentThemes: ['mono', 'dusk', 'ocean', 'glacier'],
             timerStyle: 'flip',
+            timerFont: 'system',
             colorBackground: true,
             hideBgWhenRunning: false,
             notifications: true
@@ -1757,6 +1825,21 @@ Space: start/pause  ||  R: reset  ||  N: next
                 default:
                     if (timerDisplay) timerDisplay.classList.remove('hidden');
             }
+        }
+
+        function updateTimerFont() {
+            const fontMap = {
+                'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                'inter': '"Inter", sans-serif',
+                'poppins': '"Poppins", sans-serif',
+                'montserrat': '"Montserrat", sans-serif',
+                'raleway': '"Raleway", sans-serif',
+                'jetbrains': '"JetBrains Mono", monospace',
+                'space': '"Space Mono", monospace',
+                'orbitron': '"Orbitron", sans-serif'
+            };
+            const font = fontMap[settings.timerFont] || fontMap['system'];
+            document.documentElement.style.setProperty('--timer-font', font);
         }
 
         function updateColorBackground() {
@@ -2322,6 +2405,7 @@ Space: start/pause  ||  R: reset  ||  N: next
 
         function loadSettingsToForm() {
             document.getElementById('setting-timer-style').value = settings.timerStyle;
+            document.getElementById('setting-font').value = settings.timerFont || 'system';
             document.getElementById('setting-color-bg').checked = settings.colorBackground;
             document.getElementById('setting-hide-bg-running').checked = settings.hideBgWhenRunning;
             document.getElementById('setting-pomodoro').value = settings.pomodoroDuration;
@@ -2499,6 +2583,13 @@ Space: start/pause  ||  R: reset  ||  N: next
             saveSettings();
         });
 
+        // Font live update
+        document.getElementById('setting-font').addEventListener('change', function() {
+            settings.timerFont = this.value;
+            updateTimerFont();
+            saveSettings();
+        });
+
         // Color background live update
         document.getElementById('setting-color-bg').addEventListener('change', function() {
             settings.colorBackground = this.checked;
@@ -2609,6 +2700,7 @@ Space: start/pause  ||  R: reset  ||  N: next
 
                     applyTheme(settings.theme);
                     updateTimerStyle();
+                    updateTimerFont();
                     updateColorBackground();
                     loadSettingsToForm();
                     updateGoalDisplay();
@@ -2655,6 +2747,7 @@ Space: start/pause  ||  R: reset  ||  N: next
 
             applyTheme(settings.theme);
             updateTimerStyle();
+            updateTimerFont();
             updateColorBackground();
             loadSettingsToForm();
             updateGoalDisplay();
@@ -2736,7 +2829,16 @@ Space: start/pause  ||  R: reset  ||  N: next
             pauseTimer();
         }
 
+        // Send heartbeat immediately on page load, then every 2 seconds
+        sendHeartbeat();
         setInterval(sendHeartbeat, 2000);
+
+        // Send immediate heartbeat when tab becomes visible (handles browser throttling)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                sendHeartbeat();
+            }
+        });
 
         window.addEventListener('beforeunload', () => {
             navigator.sendBeacon('/shutdown');
@@ -2758,8 +2860,9 @@ Space: start/pause  ||  R: reset  ||  N: next
 
             applyTheme(settings.theme);
 
-            // Apply saved timer style and color background
+            // Apply saved timer style, font, and color background
             updateTimerStyle();
+            updateTimerFont();
             updateColorBackground();
 
             state.timeRemaining = getDuration(state.mode);
