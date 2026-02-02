@@ -28,7 +28,7 @@ from functools import partial
 
 # Configuration
 DEFAULT_PORT = 8888
-HEARTBEAT_TIMEOUT = 10  # seconds without heartbeat before shutdown
+HEARTBEAT_TIMEOUT = 120  # seconds without heartbeat before shutdown (browsers heavily throttle background tabs)
 HEARTBEAT_CHECK_INTERVAL = 5  # seconds between heartbeat checks
 SHUTDOWN_GRACE_PERIOD = 3  # seconds to wait after shutdown request (allows reload)
 
@@ -90,9 +90,9 @@ class PomodoroHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Suppress default logging for cleaner output."""
-        # Only log non-heartbeat requests
-        if '/heartbeat' not in args[0] and '/shutdown' not in args[0]:
-            print(f"[{self.log_date_time_string()}] {args[0]}")
+        msg = str(args[0]) if args else ''
+        if '/heartbeat' not in msg and '/shutdown' not in msg:
+            print(f"[{self.log_date_time_string()}] {msg}")
 
     def do_GET(self):
         global last_heartbeat, shutdown_requested
@@ -236,7 +236,9 @@ def initiate_shutdown(reason="Unknown"):
 def signal_handler(signum, frame):
     """Handle Ctrl+C and other termination signals."""
     signal_name = signal.Signals(signum).name
-    initiate_shutdown(f"Received {signal_name}")
+    print(f"\n[Shutdown] Received {signal_name}")
+    print("\n[Server stopped]")
+    os._exit(0)
 
 
 def is_wsl():
