@@ -91,8 +91,10 @@ class PomodoroHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         """Suppress default logging for cleaner output."""
         msg = str(args[0]) if args else ''
-        if '/heartbeat' not in msg and '/shutdown' not in msg:
-            print(f"[{self.log_date_time_string()}] {msg}")
+        # Hide heartbeat, shutdown, and static asset requests
+        if '/heartbeat' in msg or '/shutdown' in msg or '/fonts/' in msg:
+            return
+        print(f"[{self.log_date_time_string()}] {msg}")
 
     def do_GET(self):
         global last_heartbeat, shutdown_requested
