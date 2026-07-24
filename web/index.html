@@ -1,1 +1,310 @@
-<!doctype html><title>Pomoflow</title>ok
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25:00 - Pomodoro</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <button class="settings-btn" onclick="openSettings()" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Timer Section -->
+        <section class="timer-section">
+            <!-- Mode Tabs -->
+            <div class="mode-tabs">
+                <button class="mode-tab active" data-mode="pomodoro" onclick="switchMode('pomodoro')">Pomodoro</button>
+                <button class="mode-tab" data-mode="shortBreak" onclick="switchMode('shortBreak')">Short Break</button>
+                <button class="mode-tab" data-mode="longBreak" onclick="switchMode('longBreak')">Long Break</button>
+            </div>
+
+            <!-- Timer Display - Minimal -->
+            <div class="timer-display" id="timer-display">25:00</div>
+
+            <!-- Timer Display - Circular -->
+            <div class="timer-circular" id="timer-circular">
+                <svg class="timer-ring" viewBox="0 0 100 100">
+                    <circle class="ring-bg" cx="50" cy="50" r="45" />
+                    <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="45"
+                            stroke-dasharray="283" stroke-dashoffset="0" />
+                </svg>
+                <div class="timer-text" id="timer-text-circular">25:00</div>
+            </div>
+
+            <!-- Timer Display - Flip Clock -->
+            <div class="timer-flip" id="timer-flip">
+                <div class="flip-group" id="flip-minutes">
+                    <div class="flip-card" data-digit="0">
+                        <div class="top"><span>2</span></div>
+                        <div class="bottom"><span>2</span></div>
+                        <div class="top-flip"><span>2</span></div>
+                        <div class="bottom-flip"><span>2</span></div>
+                    </div>
+                    <div class="flip-card" data-digit="1">
+                        <div class="top"><span>5</span></div>
+                        <div class="bottom"><span>5</span></div>
+                        <div class="top-flip"><span>5</span></div>
+                        <div class="bottom-flip"><span>5</span></div>
+                    </div>
+                </div>
+                <div class="flip-separator">:</div>
+                <div class="flip-group" id="flip-seconds">
+                    <div class="flip-card" data-digit="2">
+                        <div class="top"><span>0</span></div>
+                        <div class="bottom"><span>0</span></div>
+                        <div class="top-flip"><span>0</span></div>
+                        <div class="bottom-flip"><span>0</span></div>
+                    </div>
+                    <div class="flip-card" data-digit="3">
+                        <div class="top"><span>0</span></div>
+                        <div class="bottom"><span>0</span></div>
+                        <div class="top-flip"><span>0</span></div>
+                        <div class="bottom-flip"><span>0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timer Controls -->
+            <div class="timer-controls">
+                <button class="control-btn secondary" onclick="resetTimer()" title="Reset">↺</button>
+                <button class="control-btn primary" id="start-btn" onclick="toggleTimer()">Start</button>
+                <button class="control-btn secondary" onclick="skipTimer()" title="Skip">⏭</button>
+            </div>
+
+            <!-- Session Stats -->
+            <div class="session-stats">
+                <div class="session-counter" id="session-counter">Study 1</div>
+                <div class="session-meta">
+                    <div class="streak-display" id="streak-display" title="Total pomodoros completed">
+                        <span id="streak-count">0</span> completed
+                    </div>
+                    <div class="goal-display">
+                        <button onclick="adjustGoal(-1)">−</button>
+                        <span class="goal-progress"><span id="goal-current">0</span>/<span id="goal-target">4</span></span>
+                        <button onclick="adjustGoal(1)">+</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+Space: start/pause  ||  R: reset  ||  N: next
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Appearance Settings -->
+                <div class="setting-group">
+                    <h3>Color Theme</h3>
+                    <div class="theme-selector">
+                        <div class="recent-themes-row">
+                            <div class="recent-themes" id="recent-themes">
+                                <!-- 3 recent theme swatches generated by JS -->
+                            </div>
+                            <button class="expand-btn" id="theme-expand-btn" onclick="toggleThemeGrid()">
+                                <span class="expand-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="theme-grid-container" id="theme-grid-container">
+                            <div class="theme-grid" id="theme-grid">
+                                <!-- Theme swatches generated by JS -->
+                            </div>
+                            <div id="custom-themes-section">
+                                <h4>Custom Themes</h4>
+                                <div class="custom-themes-row" id="custom-theme-grid">
+                                    <!-- Custom theme swatches + create button -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theme Editor (slides in) -->
+                <div class="theme-editor" id="theme-editor">
+                    <div class="theme-editor-header">
+                        <button class="back-btn" onclick="closeThemeEditor()">←</button>
+                        <h3 id="theme-editor-title">Create Theme</h3>
+                    </div>
+                    <div class="theme-editor-body">
+                        <input type="text" id="theme-name-input" placeholder="Theme name" maxlength="20">
+                        <div class="color-picker-row">
+                            <label>Pomodoro</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-pomodoro" value="#ff6b6b">
+                                <input type="text" id="color-pomodoro-hex" value="#ff6b6b" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="color-picker-row">
+                            <label>Short Break</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-short-break" value="#6bffb8">
+                                <input type="text" id="color-short-break-hex" value="#6bffb8" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="color-picker-row">
+                            <label>Long Break</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-long-break" value="#6bb3ff">
+                                <input type="text" id="color-long-break-hex" value="#6bb3ff" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="theme-preview">
+                            <div class="preview-swatch" id="preview-pomodoro"></div>
+                            <div class="preview-swatch" id="preview-short-break"></div>
+                            <div class="preview-swatch" id="preview-long-break"></div>
+                        </div>
+                        <div class="theme-editor-actions">
+                            <button class="action-btn primary" onclick="saveCustomTheme()">Save Theme</button>
+                            <button class="action-btn danger" id="delete-theme-btn" onclick="deleteCustomTheme()" style="display:none;">Delete Theme</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h3>Appearance</h3>
+                    <div class="setting-row">
+                        <label>Timer Style</label>
+                        <select id="setting-timer-style" class="theme-select">
+                            <option value="minimal">Minimal</option>
+                            <option value="circular">Circular</option>
+                            <option value="flip">Flip Clock</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Timer Font</label>
+                        <select id="setting-font" class="theme-select">
+                            <option value="system">System</option>
+                            <option value="inter">Inter</option>
+                            <option value="poppins">Poppins</option>
+                            <option value="montserrat">Montserrat</option>
+                            <option value="raleway">Raleway</option>
+                            <option value="jetbrains">JetBrains Mono</option>
+                            <option value="space">Space Mono</option>
+                            <option value="orbitron">Orbitron</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Color Background</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-color-bg" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Dark Background When Running</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-hide-bg-running">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Timer Settings -->
+                <div class="setting-group">
+                    <h3>Timer (minutes)</h3>
+                    <div class="setting-row">
+                        <label>Pomodoro</label>
+                        <input type="number" id="setting-pomodoro" min="1" max="60" value="25">
+                    </div>
+                    <div class="setting-row">
+                        <label>Short Break</label>
+                        <input type="number" id="setting-short-break" min="1" max="30" value="5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Long Break</label>
+                        <input type="number" id="setting-long-break" min="1" max="60" value="15">
+                    </div>
+                </div>
+
+                <!-- Auto-start Settings -->
+                <div class="setting-group">
+                    <h3>Auto Start</h3>
+                    <div class="setting-row">
+                        <label>Auto-start Breaks</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-breaks" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Auto-start Pomodoros</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-pomodoros">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Sound Settings -->
+                <div class="setting-group">
+                    <h3>Sound</h3>
+                    <div class="setting-row">
+                        <label>Notification Sound</label>
+                        <select id="setting-sound" class="theme-select">
+                            <option value="chime">Chime</option>
+                            <option value="digital">Digital</option>
+                            <option value="gong">Gong</option>
+                            <option value="melody">Melody</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Volume</label>
+                        <input type="range" id="setting-volume" min="0" max="100" value="50">
+                        <span class="volume-value" id="volume-value">50%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Test Sound</label>
+                        <button class="test-sound-btn" onclick="playNotification(true)">Play</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>Browser Notifications</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-notifications" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="setting-group">
+                    <h3>Data</h3>
+                    <div class="setting-actions">
+                        <button class="action-btn" onclick="exportSettings()">Export Settings</button>
+                        <button class="action-btn" onclick="document.getElementById('import-file').click()">Import Settings</button>
+                        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importSettings(event)">
+                        <button class="action-btn danger" onclick="resetToDefaults()">Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disconnect Overlay -->
+    <div class="modal-overlay" id="disconnect-overlay">
+        <div class="disconnect-message">
+            <div class="disconnect-icon">--</div>
+            <h2>Server Disconnected</h2>
+            <p>The Pomodoro server has stopped.</p>
+            <p class="disconnect-hint">You can close this tab.</p>
+        </div>
+    </div>
+
+    <script type="module" src="/js/timer.js"></script>
+</body>
+</html>
