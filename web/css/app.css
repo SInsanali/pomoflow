@@ -65,6 +65,7 @@
             --text-tertiary: rgba(255, 255, 255, 0.3);
             --border-color: rgba(255, 255, 255, 0.08);
             --border-light: rgba(255, 255, 255, 0.12);
+            --header-h: 56px;
         }
 
         /* Reset & Base */
@@ -105,15 +106,77 @@
         .container {
             max-width: 480px;
             margin: 0 auto;
-            padding: 60px 20px 20px;
+            padding: calc(var(--header-h) + 24px) 20px 20px;
         }
 
         /* Header */
-        header {
+        .app-header {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 20px;
             z-index: 100;
+            background: color-mix(in srgb, var(--bg-primary) 70%, transparent);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .app-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .app-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+        }
+
+        .app-nav a:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .app-nav a.nav-active {
+            color: var(--accent);
+            background: var(--bg-glass-hover);
+        }
+
+        .app-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quit-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .quit-btn:hover {
+            background: color-mix(in srgb, #ff5c5c 18%, var(--bg-glass));
+            border-color: color-mix(in srgb, #ff5c5c 40%, var(--border-light));
+            color: #ff8a8a;
         }
 
         .settings-btn {
@@ -1133,6 +1196,74 @@
             margin-top: 20px;
             font-size: 0.8rem;
             color: var(--text-tertiary);
+        }
+
+        /* Landing / router page */
+        .landing {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .landing-title {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--accent);
+        }
+
+        .landing-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 32px;
+        }
+
+        .landing-nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .landing-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 180px;
+            height: 160px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .landing-card:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            color: var(--accent);
+        }
+
+        .landing-card-icon {
+            font-size: 2.4rem;
+            line-height: 1;
+        }
+
+        .landing-card-label {
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
         .hidden {

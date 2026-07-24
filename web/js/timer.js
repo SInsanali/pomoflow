@@ -1493,6 +1493,14 @@
             }
         });
 
+        // Quit button: stop the server, then show a closed-state message.
+        document.getElementById('quit-btn').addEventListener('click', async () => {
+            await api.quit();
+            document.body.innerHTML =
+                "<main class='landing'><h1 class='landing-title'>Pomoflow stopped.</h1>" +
+                "<p class='landing-subtitle'>You can close this window.</p></main>";
+        });
+
         // ===== INITIALIZATION =====
         function init() {
             loadSettings();
