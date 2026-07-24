@@ -1,0 +1,184 @@
+/* Dashboard-specific styles. Inherits base tokens/dark theme from app.css.
+   Heatmap uses a single-hue sequential ramp (lightness-varying, so it stays
+   distinguishable for colorblind viewers) driven by CSS custom properties. */
+
+:root {
+    /* Empty + 4 intensity levels — GitHub-style green sequential ramp. */
+    --lvl-0: rgba(255, 255, 255, 0.06);
+    --lvl-1: #0e4429;
+    --lvl-2: #006d32;
+    --lvl-3: #26a641;
+    --lvl-4: #39d353;
+}
+
+.dash {
+    width: min(92vw, 1100px);
+    margin: 0 auto;
+    padding: calc(var(--header-h) + 28px) 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Stat tiles */
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 28px 16px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    text-align: center;
+}
+
+.tile-value {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.tile-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.4px;
+}
+
+/* Cards */
+.card {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.card h2 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+}
+
+.chart {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.chart svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Bars */
+.bars {
+    width: 100%;
+}
+
+.bars rect {
+    fill: var(--accent);
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+}
+
+.bars rect:hover {
+    opacity: 1;
+}
+
+/* Heatmap */
+.heat {
+    max-width: 100%;
+}
+
+.heat rect {
+    stroke: rgba(0, 0, 0, 0.25);
+    stroke-width: 0.5;
+}
+
+.heat rect.lvl-0 { fill: var(--lvl-0); }
+.heat rect.lvl-1 { fill: var(--lvl-1); }
+.heat rect.lvl-2 { fill: var(--lvl-2); }
+.heat rect.lvl-3 { fill: var(--lvl-3); }
+.heat rect.lvl-4 { fill: var(--lvl-4); }
+
+.heat-legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 12px;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+}
+
+.heat-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.heat-swatch.lvl-0 { background: var(--lvl-0); }
+.heat-swatch.lvl-1 { background: var(--lvl-1); }
+.heat-swatch.lvl-2 { background: var(--lvl-2); }
+.heat-swatch.lvl-3 { background: var(--lvl-3); }
+.heat-swatch.lvl-4 { background: var(--lvl-4); }
+
+.heat-legend span:first-child { margin-right: 4px; }
+.heat-legend span:last-child { margin-left: 4px; }
+
+/* Recent-sessions table */
+.table-wrap {
+    overflow-x: auto;
+}
+
+#log {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+#log th {
+    text-align: left;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#log td {
+    padding: 10px 12px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+#log tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.log-empty {
+    color: var(--text-tertiary);
+    text-align: center;
+    font-style: italic;
+}
+
+@media (max-width: 560px) {
+    .tiles {
+        grid-template-columns: 1fr;
+    }
+}
