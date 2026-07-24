@@ -1,3 +1,6 @@
+        import { reconcile } from '/js/resume.js';
+        import { api } from '/js/api.js';
+
         // ===== STATE =====
         const state = {
             mode: 'pomodoro',
@@ -9,7 +12,8 @@
             animationId: null,
             startTime: null,
             startTimeRemaining: null,
-            sessionGoal: 4  // default target
+            sessionGoal: 4,  // default target
+            currentBlockId: null
         };
 
         const settings = {
@@ -581,7 +585,111 @@
             }
         }
 
+        // ===== PERSISTENCE / RESUME / SESSION LOGGING =====
+        const SNAP_KEY = 'pomoflow-snapshot';
+
+        function saveSnapshot() {
+            if (!state.currentBlockId) state.currentBlockId = crypto.randomUUID();
+            const planned = getDuration(state.mode);
+            // Effective anchor: the startTime that would reproduce the CURRENT
+            // timeRemaining if the block had run continuously from it. This
+            // keeps reconcile() correct across pause/resume cycles, not just
+            // for a block that has run uninterrupted since it began.
+            const effectiveStart = Date.now() - (planned - state.timeRemaining) * 1000;
+            localStorage.setItem(SNAP_KEY, JSON.stringify({
+                id: state.currentBlockId,
+                mode: state.mode,
+                startTime: effectiveStart,
+                plannedSeconds: planned,
+                isRunning: state.isRunning,
+                timeRemaining: state.timeRemaining
+            }));
+        }
+
+        function clearSnapshot() {
+            localStorage.removeItem(SNAP_KEY);
+            state.currentBlockId = null;
+        }
+
+        function logCurrentBlock(completed, actualSeconds) {
+            const planned = getDuration(state.mode);
+            const startedAtMs = Date.now() - (planned - state.timeRemaining) * 1000;
+            const payload = {
+                id: state.currentBlockId || crypto.randomUUID(),
+                mode: state.mode,
+                started_at: new Date(startedAtMs).toISOString(),
+                ended_at: new Date().toISOString(),
+                planned_seconds: planned,
+                actual_seconds: actualSeconds,
+                completed
+            };
+            // Capture the payload (incl. the outgoing block's id) and clear the
+            // snapshot SYNCHRONOUSLY, before the network call. Callers
+            // (onTimerComplete/skipTimer) invoke this and then immediately
+            // call advanceToNextMode() -> switchMode(), whose own
+            // clearSnapshot() must be a no-op by the time it runs, and must
+            // never race ahead of (and wipe) a snapshot for a block that
+            // switchMode/startTimer starts next. Keeping this clear
+            // synchronous (rather than awaiting the fetch first) guarantees
+            // that ordering regardless of network latency.
+            clearSnapshot();
+            return api.logSession(payload);
+        }
+
+        function restoreFromSnapshot() {
+            let snap;
+            try {
+                snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+            } catch (e) {
+                snap = null;
+            }
+            if (!snap) return;
+
+            if (snap.isRunning) {
+                const r = reconcile(snap, Date.now(), getDuration);
+                if (r.action === 'resume') {
+                    // switchMode() itself calls clearSnapshot(), which would
+                    // wipe currentBlockId if we set it beforehand — so sync
+                    // UI/tabs FIRST, then apply the restored id/remaining,
+                    // then startTimer() (which re-saves the snapshot with
+                    // the correct final state, overwriting switchMode's
+                    // transient idle save).
+                    switchMode(snap.mode);
+                    state.currentBlockId = snap.id;
+                    state.timeRemaining = r.remainingSeconds;
+                    startTimer();
+                    updateDisplay();
+                } else if (r.action === 'complete') {
+                    api.logSession(r.completedBlock);
+                    clearSnapshot();
+                    state.mode = snap.mode;
+                    advanceToNextMode();
+                } // 'fresh': do nothing
+            } else {
+                // Paused: do NOT advance by wall-clock time while disconnected.
+                // Restore exactly as left, still paused, and keep the snapshot
+                // so a further reload (without ever starting) still restores it.
+                switchMode(snap.mode);
+                state.currentBlockId = snap.id;
+                state.timeRemaining = snap.timeRemaining;
+                // switchMode() reset timeRemaining to the full duration and
+                // saved that idle snapshot; re-save now to persist the
+                // actual restored paused position (there's no startTimer()
+                // call here to do this overwrite for us).
+                saveSnapshot();
+                updateDisplay();
+            }
+        }
+
         function switchMode(mode, autoStart = false) {
+            // A manual/programmatic mode switch discards any in-flight block's
+            // snapshot (a new block id will be minted on next start). Callers
+            // that need to log the outgoing block (onTimerComplete, skipTimer)
+            // MUST call logCurrentBlock()/clearSnapshot() BEFORE invoking
+            // switchMode (directly or via advanceToNextMode), since this clear
+            // is a no-op by the time it runs there.
+            clearSnapshot();
+
             // Clear any existing timer
             if (state.timerId) {
                 clearInterval(state.timerId);
@@ -613,6 +721,13 @@
             updateDisplay();
             updateStartButton();
             updateSessionCounter();
+
+            // Persist the (idle, not-yet-started) state for this mode so a
+            // reload before pressing Start still restores the right mode/
+            // duration. If autoStart kicks in below, startTimer() saves
+            // again immediately after with the running state, superseding
+            // this.
+            saveSnapshot();
 
             // Auto-start if enabled
             if (autoStart) {
@@ -667,6 +782,8 @@
                     onTimerComplete();
                 }
             }, 1000);
+
+            saveSnapshot();
         }
 
         function pauseTimer() {
@@ -680,6 +797,7 @@
             }
             updateStartButton();
             updateColorBackground();
+            saveSnapshot();
         }
 
         function updateRingProgress(timeRemaining) {
@@ -708,10 +826,30 @@
             clearFlipAnimations();
             prevFlipDigits = ['', '', '', ''];
             updateDisplay();
+            // pauseTimer() just saved a snapshot with the pre-reset
+            // timeRemaining; re-save so localStorage matches the now-full
+            // duration (otherwise a reload after Reset would restore the
+            // stale paused position instead of the reset one).
+            saveSnapshot();
         }
 
         function skipTimer() {
+            // Compute before pauseTimer()/switchMode() touch state: a block
+            // is "in progress" if it's currently running, or paused partway
+            // through (elapsed > 0). A skip from a fresh/never-started timer
+            // (elapsed === 0, not running) has nothing to log.
+            const elapsed = getDuration(state.mode) - state.timeRemaining;
+            const blockInProgress = state.isRunning || elapsed > 0;
+
             pauseTimer();
+
+            if (blockInProgress) {
+                // Log the partial block (completed=0) BEFORE advancing, for
+                // the same reason as onTimerComplete: advanceToNextMode() ->
+                // switchMode() clears the snapshot for the *next* block, and
+                // must not race ahead of logging the outgoing one.
+                logCurrentBlock(0, elapsed);
+            }
 
             // If skipping a pomodoro, count it as completed
             if (state.mode === 'pomodoro') {
@@ -734,6 +872,13 @@
         function onTimerComplete() {
             pauseTimer();
             playNotification();
+
+            // Log the completed block (all modes, breaks included) BEFORE
+            // advancing. advanceToNextMode() -> switchMode() clears the
+            // snapshot for the *upcoming* block; logCurrentBlock() has
+            // already logged and cleared the *outgoing* block's snapshot by
+            // then, so there is no double-clear / lost-log race.
+            logCurrentBlock(1, getDuration(state.mode));
 
             if (state.mode === 'pomodoro') {
                 // Completed a pomodoro
@@ -1352,7 +1497,6 @@
         function init() {
             loadSettings();
             loadCustomThemes();
-            loadState();
             loadGoal();
 
             applyTheme(settings.theme);
@@ -1362,7 +1506,17 @@
             updateTimerFont();
             updateColorBackground();
 
+            // Fresh-start default (overridden below if a snapshot restores).
             state.timeRemaining = getDuration(state.mode);
+
+            // Replaces the old loadState() reset: reconcile any live snapshot
+            // left from before a reload/close (resume a running block, log
+            // one that finished while away, or restore a paused position).
+            // Must run after loadSettings() (durations depend on settings)
+            // and after the fresh-start default above so a restore's
+            // timeRemaining isn't clobbered by it.
+            restoreFromSnapshot();
+
             updateDisplay();
             updateSessionCounter();
             updateGoalDisplay();
