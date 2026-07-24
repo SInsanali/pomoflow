@@ -33,3 +33,25 @@ def init_schema(conn):
         """
     )
     conn.commit()
+
+def insert_session(conn, s):
+    cur = conn.execute(
+        """INSERT OR IGNORE INTO sessions
+           (id, mode, started_at, ended_at, planned_seconds, actual_seconds, completed)
+           VALUES (:id, :mode, :started_at, :ended_at, :planned_seconds, :actual_seconds, :completed)""",
+        s,
+    )
+    conn.commit()
+    return cur.rowcount == 1
+
+def get_sessions(conn, frm, to):
+    clauses, params = [], []
+    if frm:
+        clauses.append("started_at >= ?"); params.append(frm)
+    if to:
+        clauses.append("started_at < ?"); params.append(to)
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    rows = conn.execute(
+        f"SELECT * FROM sessions {where} ORDER BY started_at DESC", params
+    ).fetchall()
+    return [dict(r) for r in rows]
