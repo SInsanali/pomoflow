@@ -29,3 +29,25 @@ def test_no_heartbeat_endpoint(tmp_path):
             assert e.code == 404
     finally:
         srv.shutdown()
+
+def _post(port, path, obj):
+    data = json.dumps(obj).encode()
+    req = urllib.request.Request(f"http://localhost:{port}{path}", data=data,
+                                 headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req) as r:
+        return r.status, json.loads(r.read())
+
+def _sess(id="a"):
+    return dict(id=id, mode="pomodoro", started_at="2026-07-23T10:00:00Z",
+                ended_at="2026-07-23T10:25:00Z", planned_seconds=1500,
+                actual_seconds=1500, completed=1)
+
+def test_post_session_idempotent(tmp_path):
+    srv, port = _start(tmp_path)
+    try:
+        assert _post(port, "/api/sessions", _sess())[1] == {"created": True}
+        assert _post(port, "/api/sessions", _sess())[1] == {"created": False}
+        status, body = _get(port, "/api/sessions")
+        assert len(json.loads(body)["sessions"]) == 1
+    finally:
+        srv.shutdown()

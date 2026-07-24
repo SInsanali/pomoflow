@@ -1,5 +1,6 @@
 import http.server, socketserver, os, json
 from functools import partial
+from urllib.parse import urlparse, parse_qs
 import db as dbmod
 
 DEFAULT_PORT = 8888
@@ -20,10 +21,26 @@ class PomoHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _read_json(self):
+        length = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(length)) if length else {}
+
     def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/sessions":
+            q = parse_qs(parsed.query)
+            rows = dbmod.get_sessions(self.conn, q.get("from", [None])[0], q.get("to", [None])[0])
+            return self._send_json({"sessions": rows})
         if self.path == "/":
             self.path = "/landing.html"
         return super().do_GET()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/sessions":
+            created = dbmod.insert_session(self.conn, self._read_json())
+            return self._send_json({"created": created})
+        self._send_json({"error": "not found"}, 404)
 
 class ReusableTCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
