@@ -51,3 +51,30 @@ def test_post_session_idempotent(tmp_path):
         assert len(json.loads(body)["sessions"]) == 1
     finally:
         srv.shutdown()
+
+def _put(port, path, obj):
+    data = json.dumps(obj).encode()
+    req = urllib.request.Request(f"http://localhost:{port}{path}", data=data,
+                                 headers={"Content-Type": "application/json"}, method="PUT")
+    with urllib.request.urlopen(req) as r:
+        return r.status, json.loads(r.read())
+
+def test_stats_endpoint(tmp_path):
+    srv, port = _start(tmp_path)
+    try:
+        _post(port, "/api/sessions", _sess())
+        status, body = _get(port, "/api/stats?tz=0")
+        assert json.loads(body)["totals"]["all_time_blocks"] == 1
+    finally:
+        srv.shutdown()
+
+def test_settings_and_presets(tmp_path):
+    srv, port = _start(tmp_path)
+    try:
+        _put(port, "/api/settings", {"theme": "ocean"})
+        assert json.loads(_get(port, "/api/settings")[1])["theme"] == "ocean"
+        created = _post(port, "/api/presets", {"name": "P1", "config": {"theme": "ocean"}})[1]
+        assert created["name"] == "P1"
+        assert len(json.loads(_get(port, "/api/presets")[1])["presets"]) == 1
+    finally:
+        srv.shutdown()

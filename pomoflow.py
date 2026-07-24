@@ -27,19 +27,45 @@ class PomoHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path == "/api/sessions":
-            q = parse_qs(parsed.query)
-            rows = dbmod.get_sessions(self.conn, q.get("from", [None])[0], q.get("to", [None])[0])
-            return self._send_json({"sessions": rows})
+        p, q = parsed.path, parse_qs(parsed.query)
+        if p == "/api/sessions":
+            return self._send_json({"sessions": dbmod.get_sessions(
+                self.conn, q.get("from", [None])[0], q.get("to", [None])[0])})
+        if p == "/api/stats":
+            tz = int(q.get("tz", ["0"])[0])
+            return self._send_json(dbmod.get_stats(
+                self.conn, q.get("from", [None])[0], q.get("to", [None])[0], tz))
+        if p == "/api/settings":
+            return self._send_json(dbmod.get_settings(self.conn) or {})
+        if p == "/api/presets":
+            return self._send_json({"presets": dbmod.list_presets(self.conn)})
         if self.path == "/":
             self.path = "/landing.html"
         return super().do_GET()
 
     def do_POST(self):
-        parsed = urlparse(self.path)
-        if parsed.path == "/api/sessions":
-            created = dbmod.insert_session(self.conn, self._read_json())
-            return self._send_json({"created": created})
+        p = urlparse(self.path).path
+        if p == "/api/sessions":
+            return self._send_json({"created": dbmod.insert_session(self.conn, self._read_json())})
+        if p == "/api/presets":
+            body = self._read_json()
+            return self._send_json(dbmod.create_preset(self.conn, body["name"], body["config"]))
+        if p == "/api/quit":
+            self._send_json({"quitting": True})
+            import threading; threading.Thread(target=self.server.shutdown, daemon=True).start()
+            return
+        self._send_json({"error": "not found"}, 404)
+
+    def do_PUT(self):
+        if urlparse(self.path).path == "/api/settings":
+            dbmod.put_settings(self.conn, self._read_json())
+            return self._send_json({"saved": True})
+        self._send_json({"error": "not found"}, 404)
+
+    def do_DELETE(self):
+        parts = urlparse(self.path).path.strip("/").split("/")
+        if len(parts) == 3 and parts[0] == "api" and parts[1] == "presets":
+            return self._send_json({"deleted": dbmod.delete_preset(self.conn, parts[2])})
         self._send_json({"error": "not found"}, 404)
 
 class ReusableTCPServer(socketserver.ThreadingTCPServer):
