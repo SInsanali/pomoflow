@@ -1,0 +1,4 @@
+#!/bin/bash
+# Resolve the repo root relative to this bundle (bundle lives at repo root).
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+exec /usr/bin/env python3 "$DIR/pomoflow"
