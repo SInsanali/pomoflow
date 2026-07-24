@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - **Zero runtime dependencies.** Server uses only the Python standard library; pages use only vanilla HTML/CSS/JS. No chart libraries, no frameworks, no pip/npm runtime installs. (Test-only tools — `pytest`, `node:test` — are allowed and already available.)
-- **Python 3.6+** compatibility for the server.
+- **Python 3.7+** compatibility for the server (relaxed from 3.6 on 2026-07-23 — 3.6 is EOL; allows `datetime.fromisoformat`). README to be updated in Task 19.
 - **Offline-capable.** No external network calls, no CDN assets, no remote fonts. All assets local.
 - **Localhost only.** Server binds `localhost`; all API endpoints are localhost-only.
 - **Cross-platform launch** must still work on macOS, Linux, Windows, WSL (preserve existing browser-detection approach); `Pomoflow.app` is a macOS-only convenience on top.
