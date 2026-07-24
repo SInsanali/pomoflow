@@ -85,14 +85,42 @@ function renderHeatmap(daily) {
 }
 
 function renderLog(sessions) {
-    const rows = sessions.slice(0, 30).map(s => {
-        const when = new Date(s.started_at).toLocaleString();
-        const mode = MODE_LABELS[s.mode] || s.mode;
-        return `<tr><td>${when}</td><td>${mode}</td><td>${fmtDuration(s.actual_seconds)}</td></tr>`;
-    }).join("");
-    document.getElementById("log").innerHTML =
-        "<thead><tr><th>When</th><th>Mode</th><th>Length</th></tr></thead>" +
-        "<tbody>" + (rows || `<tr><td colspan="3" class="log-empty">No sessions logged yet.</td></tr>`) + "</tbody>";
+    const table = document.getElementById("log");
+    table.innerHTML = "";
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = "<tr><th>When</th><th>Mode</th><th>Length</th></tr>";
+
+    const tbody = document.createElement("tbody");
+    const list = sessions.slice(0, 30);
+    if (!list.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.className = "log-empty";
+        td.textContent = "No sessions logged yet.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+    } else {
+        // Build cells with textContent, never innerHTML: s.mode is stored
+        // verbatim server-side and could otherwise carry injected markup.
+        for (const s of list) {
+            const tr = document.createElement("tr");
+            const cells = [
+                new Date(s.started_at).toLocaleString(),
+                MODE_LABELS[s.mode] || s.mode,
+                fmtDuration(s.actual_seconds),
+            ];
+            for (const text of cells) {
+                const td = document.createElement("td");
+                td.textContent = text;
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+    }
+
+    table.append(thead, tbody);
 }
 
 async function render() {

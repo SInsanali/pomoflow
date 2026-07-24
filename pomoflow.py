@@ -1,7 +1,12 @@
-import http.server, socketserver, os, json
+import http.server, socketserver, os, json, threading
 from functools import partial
 from urllib.parse import urlparse, parse_qs
 import db as dbmod
+
+# Session fields required by db.insert_session; enforced so malformed POSTs get
+# a clean 400 instead of a sqlite binding error with no response.
+SESSION_FIELDS = {"id", "mode", "started_at", "ended_at",
+                  "planned_seconds", "actual_seconds", "completed"}
 
 DEFAULT_PORT = 8888
 
@@ -28,39 +33,57 @@ class PomoHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         p, q = parsed.path, parse_qs(parsed.query)
-        if p == "/api/sessions":
-            return self._send_json({"sessions": dbmod.get_sessions(
-                self.conn, q.get("from", [None])[0], q.get("to", [None])[0])})
-        if p == "/api/stats":
-            tz = int(q.get("tz", ["0"])[0])
-            return self._send_json(dbmod.get_stats(
-                self.conn, q.get("from", [None])[0], q.get("to", [None])[0], tz))
-        if p == "/api/settings":
-            return self._send_json(dbmod.get_settings(self.conn) or {})
-        if p == "/api/presets":
-            return self._send_json({"presets": dbmod.list_presets(self.conn)})
+        if p.startswith("/api/"):
+            # Malformed query input (e.g. tz=abc) becomes a 400 JSON rather
+            # than an unhandled exception with no response.
+            try:
+                if p == "/api/sessions":
+                    return self._send_json({"sessions": dbmod.get_sessions(
+                        self.conn, q.get("from", [None])[0], q.get("to", [None])[0])})
+                if p == "/api/stats":
+                    tz = int(q.get("tz", ["0"])[0])
+                    return self._send_json(dbmod.get_stats(
+                        self.conn, q.get("from", [None])[0], q.get("to", [None])[0], tz))
+                if p == "/api/settings":
+                    return self._send_json(dbmod.get_settings(self.conn) or {})
+                if p == "/api/presets":
+                    return self._send_json({"presets": dbmod.list_presets(self.conn)})
+                return self._send_json({"error": "not found"}, 404)
+            except (KeyError, ValueError) as e:
+                return self._send_json({"error": f"bad request: {e}"}, 400)
         if self.path == "/":
             self.path = "/landing.html"
         return super().do_GET()
 
     def do_POST(self):
         p = urlparse(self.path).path
-        if p == "/api/sessions":
-            return self._send_json({"created": dbmod.insert_session(self.conn, self._read_json())})
-        if p == "/api/presets":
-            body = self._read_json()
-            return self._send_json(dbmod.create_preset(self.conn, body["name"], body["config"]))
-        if p == "/api/quit":
-            self._send_json({"quitting": True})
-            import threading; threading.Thread(target=self.server.shutdown, daemon=True).start()
-            return
-        self._send_json({"error": "not found"}, 404)
+        try:
+            if p == "/api/sessions":
+                body = self._read_json()
+                missing = SESSION_FIELDS - set(body)
+                if missing:
+                    return self._send_json(
+                        {"error": f"missing session fields: {sorted(missing)}"}, 400)
+                return self._send_json({"created": dbmod.insert_session(self.conn, body)})
+            if p == "/api/presets":
+                body = self._read_json()
+                return self._send_json(dbmod.create_preset(self.conn, body["name"], body["config"]))
+            if p == "/api/quit":
+                self._send_json({"quitting": True})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
+            return self._send_json({"error": "not found"}, 404)
+        except (KeyError, ValueError) as e:
+            return self._send_json({"error": f"bad request: {e}"}, 400)
 
     def do_PUT(self):
-        if urlparse(self.path).path == "/api/settings":
-            dbmod.put_settings(self.conn, self._read_json())
-            return self._send_json({"saved": True})
-        self._send_json({"error": "not found"}, 404)
+        try:
+            if urlparse(self.path).path == "/api/settings":
+                dbmod.put_settings(self.conn, self._read_json())
+                return self._send_json({"saved": True})
+            return self._send_json({"error": "not found"}, 404)
+        except (KeyError, ValueError) as e:
+            return self._send_json({"error": f"bad request: {e}"}, 400)
 
     def do_DELETE(self):
         parts = urlparse(self.path).path.strip("/").split("/")
