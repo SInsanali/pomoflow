@@ -1323,28 +1323,45 @@
             });
         });
 
-        // ===== LOCAL STORAGE =====
+        // ===== SETTINGS PERSISTENCE (server-backed, localStorage cache) =====
         function saveSettings() {
+            // Cache synchronously for instant reloads, then persist durably to
+            // the server (fire-and-forget: api.call swallows network errors).
             localStorage.setItem('pomodoro-settings', JSON.stringify(settings));
+            api.putSettings(settings);
         }
 
-        function loadSettings() {
-            const saved = localStorage.getItem('pomodoro-settings');
-            if (saved) {
-                Object.assign(settings, JSON.parse(saved));
-                // Validate theme exists, fallback to mono if not
-                if (!themes[settings.theme] && !customThemes[settings.theme]) {
-                    settings.theme = 'mono';
-                    saveSettings();
-                }
-                // Ensure recentThemes has 4 items
-                const defaultThemes = ['mono', 'dusk', 'ocean', 'glacier'];
-                while (settings.recentThemes.length < 4) {
-                    const filler = defaultThemes.find(t => !settings.recentThemes.includes(t));
-                    if (filler) settings.recentThemes.push(filler);
-                    else break;
-                }
+        // Normalize after loading from either source: fall back to a valid
+        // theme and top recentThemes back up to 4 entries.
+        function validateSettings() {
+            if (!themes[settings.theme] && !customThemes[settings.theme]) {
+                settings.theme = 'mono';
             }
+            const defaultThemes = ['mono', 'dusk', 'ocean', 'glacier'];
+            while (settings.recentThemes.length < 4) {
+                const filler = defaultThemes.find(t => !settings.recentThemes.includes(t));
+                if (filler) settings.recentThemes.push(filler);
+                else break;
+            }
+        }
+
+        async function loadSettings() {
+            const cached = JSON.parse(localStorage.getItem('pomodoro-settings') || 'null');
+            const res = await api.getSettings();
+            const server = res.ok ? res.data : null;
+
+            if (server && Object.keys(server).length) {
+                // Server is the source of truth once it has anything.
+                Object.assign(settings, server);
+            } else if (cached) {
+                // First run against the server: migrate the existing
+                // localStorage settings up so they become durable.
+                Object.assign(settings, cached);
+                await api.putSettings(settings);
+            }
+
+            validateSettings();
+            localStorage.setItem('pomodoro-settings', JSON.stringify(settings));
         }
 
         // ===== EXPORT / IMPORT / RESET =====
@@ -1502,9 +1519,11 @@
         });
 
         // ===== INITIALIZATION =====
-        function init() {
-            loadSettings();
+        async function init() {
             loadCustomThemes();
+            // Server-backed load must finish before we apply theme/style/
+            // durations below, so await it (init is async).
+            await loadSettings();
             loadGoal();
 
             applyTheme(settings.theme);
