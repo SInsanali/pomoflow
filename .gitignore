@@ -11,6 +11,12 @@ ENV/
 # Config (runtime)
 .pomodoro_config.json
 
+# Runtime data & browser profile
+pomoflow.db
+pomoflow.db-wal
+pomoflow.db-shm
+.chrome-profile/
+
 # macOS
 .DS_Store
 .AppleDouble
