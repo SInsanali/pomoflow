@@ -5,14 +5,16 @@ import launcher, pomoflow
 
 def ensure_running(port):
     if launcher.is_server_up(port):
-        return
+        return True
     subprocess.Popen([sys.executable, os.path.join(os.path.dirname(__file__), "pomoflow.py")],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
     for _ in range(50):
         if launcher.is_server_up(port):
-            return
+            return True
         time.sleep(0.1)
+    print(f"Pomoflow: server did not start on port {port} within 5s.", file=sys.stderr)
+    return False
 
 def open_window(port):
     url = f"http://localhost:{port}"
@@ -35,7 +37,9 @@ def main():
     port = launcher.resolve_port()
     if len(sys.argv) > 1 and sys.argv[1] == "stop":
         stop(port); print("Pomoflow stopped."); return
-    ensure_running(port)
+    if not ensure_running(port):
+        print("Check for errors by running: python3 pomoflow.py", file=sys.stderr)
+        sys.exit(1)
     open_window(port)
 
 if __name__ == "__main__":

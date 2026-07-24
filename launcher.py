@@ -1,4 +1,4 @@
-import os, sys, socket, subprocess, shutil, time, urllib.request
+import os, socket, shutil
 
 PROFILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".chrome-profile")
 
