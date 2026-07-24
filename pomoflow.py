@@ -78,3 +78,29 @@ def make_server(port, db_path, web_dir):
     srv = ReusableTCPServer(("localhost", port), handler)
     srv.pomo_conn = conn
     return srv
+
+# --- port config (carried over from old run.py) ---
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".pomodoro_config.json")
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE) as f:
+                return {"port": DEFAULT_PORT, **json.load(f)}
+        except Exception:
+            pass
+    return {"port": DEFAULT_PORT}
+
+def serve_main(port=None, db_path=None, web_dir=None):
+    port = port or load_config().get("port", DEFAULT_PORT)
+    db_path = db_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "pomoflow.db")
+    web_dir = web_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+    srv = make_server(port, db_path, web_dir)
+    print(f"Pomoflow running at http://localhost:{port}  (Ctrl+C or Quit button to stop)")
+    try:
+        srv.serve_forever()
+    finally:
+        srv.server_close()
+
+if __name__ == "__main__":
+    serve_main()
