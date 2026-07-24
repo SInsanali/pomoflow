@@ -43,3 +43,20 @@ def test_stats_buckets_in_local_time(tmp_path):
     assert day["2026-07-22"]["focus_seconds"] == 1500
     assert day["2026-07-22"]["blocks"] == 1
     assert stats["totals"]["all_time_blocks"] == 1
+
+def test_settings_roundtrip(tmp_path):
+    conn = db.connect(str(tmp_path / "t.db"))
+    assert db.get_settings(conn) is None
+    db.put_settings(conn, {"theme": "ocean", "pomodoroDuration": 50})
+    assert db.get_settings(conn)["theme"] == "ocean"
+    db.put_settings(conn, {"theme": "mono"})   # overwrites
+    assert db.get_settings(conn)["theme"] == "mono"
+
+def test_presets_crud(tmp_path):
+    conn = db.connect(str(tmp_path / "t.db"))
+    p = db.create_preset(conn, "Deep Work Ocean", {"pomodoroDuration": 50, "theme": "ocean"})
+    assert p["name"] == "Deep Work Ocean" and p["id"]
+    assert len(db.list_presets(conn)) == 1
+    assert db.delete_preset(conn, p["id"]) is True
+    assert db.delete_preset(conn, "missing") is False
+    assert db.list_presets(conn) == []

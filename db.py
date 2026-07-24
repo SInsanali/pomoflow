@@ -1,4 +1,6 @@
 import sqlite3
+import json
+import uuid
 from datetime import datetime, timedelta, timezone
 
 def connect(db_path):
@@ -87,3 +89,36 @@ def get_stats(conn, frm, to, tz_offset_minutes):
             "all_time_blocks": sum(v["blocks"] for v in daily.values()),
         },
     }
+
+def get_settings(conn):
+    row = conn.execute("SELECT data FROM settings WHERE id=1").fetchone()
+    return json.loads(row["data"]) if row else None
+
+def put_settings(conn, obj):
+    conn.execute(
+        "INSERT INTO settings (id, data) VALUES (1, ?) "
+        "ON CONFLICT(id) DO UPDATE SET data=excluded.data",
+        (json.dumps(obj),),
+    )
+    conn.commit()
+
+def list_presets(conn):
+    rows = conn.execute(
+        "SELECT id, name, config, created_at FROM presets ORDER BY created_at DESC"
+    ).fetchall()
+    return [{**dict(r), "config": json.loads(r["config"])} for r in rows]
+
+def create_preset(conn, name, config):
+    pid = uuid.uuid4().hex
+    created = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "INSERT INTO presets (id, name, config, created_at) VALUES (?, ?, ?, ?)",
+        (pid, name, json.dumps(config), created),
+    )
+    conn.commit()
+    return {"id": pid, "name": name, "config": config, "created_at": created}
+
+def delete_preset(conn, preset_id):
+    cur = conn.execute("DELETE FROM presets WHERE id=?", (preset_id,))
+    conn.commit()
+    return cur.rowcount == 1
