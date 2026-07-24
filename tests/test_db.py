@@ -32,3 +32,14 @@ def test_get_sessions_range_and_order(tmp_path):
     assert [r["id"] for r in rows] == ["2"]
     newest_first = db.get_sessions(conn, None, None)
     assert [r["id"] for r in newest_first] == ["2", "1"]
+
+def test_stats_buckets_in_local_time(tmp_path):
+    conn = db.connect(str(tmp_path / "t.db"))
+    # 2026-07-23T02:30:00Z with tz offset -180 (UTC-3) => local 2026-07-22 23:30
+    db.insert_session(conn, _mk(id="x", started="2026-07-23T02:30:00Z"))
+    stats = db.get_stats(conn, None, None, tz_offset_minutes=-180)
+    day = {d["date"]: d for d in stats["daily"]}
+    assert "2026-07-22" in day
+    assert day["2026-07-22"]["focus_seconds"] == 1500
+    assert day["2026-07-22"]["blocks"] == 1
+    assert stats["totals"]["all_time_blocks"] == 1

@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 def connect(db_path):
     conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -55,3 +56,34 @@ def get_sessions(conn, frm, to):
         f"SELECT * FROM sessions {where} ORDER BY started_at DESC", params
     ).fetchall()
     return [dict(r) for r in rows]
+
+def _local_date(iso_utc, tz_offset_minutes):
+    dt = datetime.fromisoformat(iso_utc.replace("Z", "+00:00"))
+    local = dt.astimezone(timezone(timedelta(minutes=tz_offset_minutes)))
+    return local.strftime("%Y-%m-%d")
+
+def get_stats(conn, frm, to, tz_offset_minutes):
+    rows = get_sessions(conn, frm, to)
+    daily = {}
+    for r in rows:
+        d = _local_date(r["started_at"], tz_offset_minutes)
+        b = daily.setdefault(d, {"date": d, "focus_seconds": 0, "blocks": 0})
+        if r["mode"] == "pomodoro":
+            b["focus_seconds"] += r["actual_seconds"]
+            b["blocks"] += 1
+    today = _local_date(
+        datetime.now(timezone.utc).isoformat(), tz_offset_minutes
+    )
+    week_start = (
+        datetime.strptime(today, "%Y-%m-%d") - timedelta(days=6)
+    ).strftime("%Y-%m-%d")
+    return {
+        "daily": sorted(daily.values(), key=lambda x: x["date"]),
+        "totals": {
+            "today_seconds": daily.get(today, {}).get("focus_seconds", 0),
+            "week_seconds": sum(
+                v["focus_seconds"] for v in daily.values() if v["date"] >= week_start
+            ),
+            "all_time_blocks": sum(v["blocks"] for v in daily.values()),
+        },
+    }
