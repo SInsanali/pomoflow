@@ -35,6 +35,13 @@
                 <button class="mode-tab" data-mode="longBreak" onclick="switchMode('longBreak')">Long Break</button>
             </div>
 
+            <!-- Clock Style Switcher -->
+            <div class="style-switch" role="tablist" aria-label="Clock style">
+                <button type="button" data-style="minimal">Minimal</button>
+                <button type="button" data-style="circular">Circular</button>
+                <button type="button" data-style="flip">Flip</button>
+            </div>
+
             <!-- Timer Display - Minimal -->
             <div class="timer-display" id="timer-display">25:00</div>
 
@@ -186,14 +193,6 @@ Space: start/pause  ||  R: reset  ||  N: next
                 <div class="setting-group">
                     <h3>Appearance</h3>
                     <div class="setting-row">
-                        <label>Timer Style</label>
-                        <select id="setting-timer-style" class="theme-select">
-                            <option value="minimal">Minimal</option>
-                            <option value="circular">Circular</option>
-                            <option value="flip">Flip Clock</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
                         <label>Timer Font</label>
                         <select id="setting-font" class="theme-select">
                             <option value="system">System</option>
@@ -310,16 +309,6 @@ Space: start/pause  ||  R: reset  ||  N: next
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Disconnect Overlay -->
-    <div class="modal-overlay" id="disconnect-overlay">
-        <div class="disconnect-message">
-            <div class="disconnect-icon">--</div>
-            <h2>Server Disconnected</h2>
-            <p>The Pomodoro server has stopped.</p>
-            <p class="disconnect-hint">You can close this tab.</p>
         </div>
     </div>
 

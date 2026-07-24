@@ -379,6 +379,15 @@
                 default:
                     if (timerDisplay) timerDisplay.classList.remove('hidden');
             }
+
+            updateStyleSwitch();
+        }
+
+        // Highlight the on-screen style-switch button for the active style.
+        function updateStyleSwitch() {
+            document.querySelectorAll('.style-switch button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.style === settings.timerStyle);
+            });
         }
 
         function updateTimerFont() {
@@ -1100,7 +1109,6 @@
         }
 
         function loadSettingsToForm() {
-            document.getElementById('setting-timer-style').value = settings.timerStyle;
             document.getElementById('setting-font').value = settings.timerFont || 'system';
             document.getElementById('setting-color-bg').checked = settings.colorBackground;
             document.getElementById('setting-hide-bg-running').checked = settings.hideBgWhenRunning;
@@ -1119,10 +1127,8 @@
             const oldPomodoro = settings.pomodoroDuration;
             const oldShort = settings.shortBreakDuration;
             const oldLong = settings.longBreakDuration;
-            const oldTimerStyle = settings.timerStyle;
             const oldColorBackground = settings.colorBackground;
 
-            settings.timerStyle = document.getElementById('setting-timer-style').value;
             settings.colorBackground = document.getElementById('setting-color-bg').checked;
             settings.pomodoroDuration = parseInt(document.getElementById('setting-pomodoro').value) || 25;
             settings.shortBreakDuration = parseInt(document.getElementById('setting-short-break').value) || 5;
@@ -1132,11 +1138,6 @@
             settings.sound = document.getElementById('setting-sound').value;
             settings.volume = parseInt(document.getElementById('setting-volume').value) / 100;
             settings.notifications = document.getElementById('setting-notifications').checked;
-
-            // Apply timer style if changed
-            if (oldTimerStyle !== settings.timerStyle) {
-                updateTimerStyle();
-            }
 
             // Apply color background if changed
             if (oldColorBackground !== settings.colorBackground) {
@@ -1356,11 +1357,15 @@
             });
         }
 
-        // Timer style live update
-        document.getElementById('setting-timer-style').addEventListener('change', function() {
-            settings.timerStyle = this.value;
-            updateTimerStyle();
-            saveSettings();
+        // On-screen clock-style switcher (replaces the old settings-modal
+        // select). Each click sets the style, applies it, and persists;
+        // updateTimerStyle() refreshes the active-button highlight.
+        document.querySelectorAll('.style-switch button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                settings.timerStyle = btn.dataset.style;
+                updateTimerStyle();
+                saveSettings();
+            });
         });
 
         // Font live update

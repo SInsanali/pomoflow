@@ -102,11 +102,18 @@
             background: color-mix(in srgb, var(--long-break-accent) 15%, #0d0d0d);
         }
 
-        /* Container */
+        /* Container — big, centered, scales up on wide/ultrawide screens */
         .container {
-            max-width: 480px;
+            width: min(92vw, 900px);
             margin: 0 auto;
-            padding: calc(var(--header-h) + 24px) 20px 20px;
+            padding: calc(var(--header-h) + 16px) 20px 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        @media (min-width: 1600px) {
+            .container { width: min(80vw, 1200px); }
         }
 
         /* Header */
@@ -245,10 +252,46 @@
             color: var(--accent);
         }
 
+        /* On-screen clock-style switcher */
+        .style-switch {
+            display: inline-flex;
+            justify-content: center;
+            gap: 4px;
+            margin: -30px auto 40px;
+            padding: 3px;
+            background: var(--bg-glass);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .style-switch button {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            padding: 6px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.4px;
+            font-family: inherit;
+            transition: all 0.25s ease;
+        }
+
+        .style-switch button:hover {
+            color: var(--text-secondary);
+        }
+
+        .style-switch button.active {
+            background: var(--bg-glass-hover);
+            color: var(--accent);
+        }
+
         /* Timer Display - Minimal Style */
         .timer-display {
             font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-            font-size: 7rem;
+            font-size: clamp(4rem, 15vw, 13rem);
+            line-height: 1;
             font-weight: 500;
             letter-spacing: 2px;
             margin-bottom: 50px;
@@ -262,8 +305,8 @@
         /* Timer Display - Circular Progress Style */
         .timer-circular {
             position: relative;
-            width: 280px;
-            height: 280px;
+            width: clamp(240px, 40vh, 520px);
+            height: clamp(240px, 40vh, 520px);
             margin: 0 auto 50px;
             display: none;
         }
@@ -292,7 +335,7 @@
         .timer-circular .timer-text {
             position: absolute;
             font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-            font-size: 3rem;
+            font-size: clamp(2rem, 7vw, 5rem);
             font-weight: 500;
             color: var(--accent);
             font-variant-numeric: tabular-nums;
@@ -313,7 +356,7 @@
             gap: 5px;
         }
         .flip-separator {
-            font-size: 4rem;
+            font-size: clamp(2.5rem, 7vw, 6rem);
             font-weight: 100;
             color: var(--accent);
             line-height: 1;
@@ -321,8 +364,8 @@
         }
         .flip-card {
             position: relative;
-            width: 70px;
-            height: 100px;
+            width: clamp(56px, 9vw, 128px);
+            height: clamp(80px, 13vw, 182px);
             perspective: 400px;
         }
         .flip-card-inner {
@@ -341,7 +384,7 @@
             align-items: center;
             justify-content: center;
             font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-            font-size: 3.5rem;
+            font-size: clamp(2.5rem, 6.5vw, 6.5rem);
             font-weight: 500;
             color: var(--accent);
             overflow: hidden;
@@ -394,26 +437,7 @@
         }
 
         @media (max-width: 480px) {
-            .timer-display {
-                font-size: 4.5rem;
-            }
-            .timer-circular {
-                width: 220px;
-                height: 220px;
-            }
-            .timer-circular .timer-text {
-                font-size: 2.5rem;
-            }
-            .flip-card {
-                width: 50px;
-                height: 70px;
-            }
-            .flip-card .top, .flip-card .bottom {
-                font-size: 2.5rem;
-            }
-            .flip-separator {
-                font-size: 2.5rem;
-            }
+            /* Timer sizes are viewport-clamped above; just tighten the card. */
             .timer-section {
                 padding: 40px 25px;
             }
@@ -1259,43 +1283,6 @@
             bottom: 0;
             left: 0;
             right: 0;
-        }
-
-        /* Disconnect Overlay */
-        .disconnect-message {
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 50px;
-            text-align: center;
-            color: var(--text-primary);
-        }
-
-        .disconnect-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .disconnect-message h2 {
-            font-size: 1rem;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .disconnect-message p {
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .disconnect-hint {
-            margin-top: 20px;
-            font-size: 0.8rem;
-            color: var(--text-tertiary);
         }
 
         /* Landing / router page */
