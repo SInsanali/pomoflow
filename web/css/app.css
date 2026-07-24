@@ -1118,6 +1118,106 @@
             gap: 8px;
         }
 
+        /* Presets */
+        .setting-hint {
+            color: var(--text-tertiary);
+            font-size: 0.78rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .preset-save-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .preset-save-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .preset-save-row input:focus {
+            outline: none;
+            border-color: var(--border-light);
+            background: var(--bg-glass-hover);
+        }
+
+        .preset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .preset-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .preset-name {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .preset-apply {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.78rem;
+            background: var(--bg-glass);
+            color: var(--accent);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .preset-apply:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-light);
+        }
+
+        .preset-delete {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            line-height: 1;
+            background: transparent;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-delete:hover {
+            color: #ff8a8a;
+            border-color: color-mix(in srgb, #ff5c5c 40%, var(--border-light));
+        }
+
+        .preset-empty {
+            color: var(--text-tertiary);
+            font-size: 0.8rem;
+            padding: 4px 2px;
+        }
+
         .action-btn {
             padding: 10px 16px;
             border: 1px solid var(--border-color);

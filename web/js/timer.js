@@ -1087,6 +1087,7 @@
             generateRecentThemes();
             generateThemeGrid();
             generateCustomThemeGrid();
+            renderPresets();
             loadSettingsToForm();
             // Reset grid state
             document.getElementById('theme-grid-container').classList.remove('expanded');
@@ -1161,6 +1162,90 @@
         // Volume slider live update
         document.getElementById('setting-volume').addEventListener('input', function() {
             document.getElementById('volume-value').textContent = this.value + '%';
+        });
+
+        // ===== PRESETS (timing + appearance snapshots) =====
+        // Exactly which settings a preset captures — timing behaviour plus the
+        // full appearance snapshot. Sound/volume/notifications are intentionally
+        // excluded (they're global preferences, not part of a "work style").
+        const PRESET_FIELDS = [
+            'pomodoroDuration', 'shortBreakDuration', 'longBreakDuration',
+            'autoStartBreaks', 'autoStartPomodoros',
+            'theme', 'timerStyle', 'timerFont', 'colorBackground', 'hideBgWhenRunning',
+        ];
+
+        function snapshotConfig() {
+            return Object.fromEntries(PRESET_FIELDS.map(k => [k, settings[k]]));
+        }
+
+        async function saveCurrentAsPreset(name) {
+            await api.createPreset(name, snapshotConfig());
+            await renderPresets();
+        }
+
+        async function applyPreset(config) {
+            Object.assign(settings, config);
+            saveSettings();
+            applyTheme(settings.theme);
+            updateTimerStyle();
+            updateTimerFont();
+            updateColorBackground();
+            // Don't yank a running block's remaining time; new durations take
+            // effect on the next block, matching saveSettingsFromForm.
+            if (!state.isRunning) {
+                state.timeRemaining = getDuration(state.mode);
+                updateDisplay();
+            }
+            // Reflect the applied values back into the (open) settings UI.
+            loadSettingsToForm();
+            updateThemeGridActive();
+            generateRecentThemes();
+        }
+
+        async function renderPresets() {
+            const list = document.getElementById('preset-list');
+            if (!list) return;
+            const res = await api.listPresets();
+            const presets = (res.ok && res.data) ? res.data.presets : [];
+            list.innerHTML = '';
+            if (!presets.length) {
+                list.innerHTML = '<div class="preset-empty">No saved presets yet.</div>';
+                return;
+            }
+            presets.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'preset-row';
+
+                const name = document.createElement('span');
+                name.className = 'preset-name';
+                name.textContent = p.name;
+
+                const apply = document.createElement('button');
+                apply.className = 'preset-apply';
+                apply.textContent = 'Apply';
+                apply.addEventListener('click', () => applyPreset(p.config));
+
+                const del = document.createElement('button');
+                del.className = 'preset-delete';
+                del.textContent = '×';
+                del.title = 'Delete preset';
+                del.addEventListener('click', async () => {
+                    await api.deletePreset(p.id);
+                    renderPresets();
+                });
+
+                row.append(name, apply, del);
+                list.appendChild(row);
+            });
+        }
+
+        // Save-current-as-preset button.
+        document.getElementById('preset-save-btn').addEventListener('click', async () => {
+            const input = document.getElementById('preset-name-input');
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            await saveCurrentAsPreset(name);
+            input.value = '';
         });
 
         // Generate theme grid
