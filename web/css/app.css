@@ -223,7 +223,7 @@
             display: inline-flex;
             justify-content: center;
             gap: 4px;
-            margin-bottom: 50px;
+            margin-bottom: 40px;
             background: var(--bg-glass);
             padding: 4px;
             border-radius: 12px;
@@ -252,34 +252,42 @@
             color: var(--accent);
         }
 
-        /* On-screen clock-style switcher */
+        /* On-screen clock-style switcher — icon-only, anchored at the
+           bottom of the card as a subtle, minimal control. */
         .style-switch {
             display: inline-flex;
             justify-content: center;
-            gap: 4px;
-            margin: -30px auto 40px;
-            padding: 3px;
+            gap: 6px;
+            margin: 36px auto 0;
+            padding: 4px;
             background: var(--bg-glass);
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
         }
 
         .style-switch button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 34px;
             background: none;
             border: none;
             color: var(--text-tertiary);
-            padding: 6px 14px;
-            border-radius: 7px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.72rem;
-            font-weight: 500;
-            letter-spacing: 0.4px;
-            font-family: inherit;
             transition: all 0.25s ease;
+        }
+
+        .style-switch button svg {
+            width: 20px;
+            height: 20px;
+            display: block;
         }
 
         .style-switch button:hover {
             color: var(--text-secondary);
+            background: var(--bg-glass-hover);
         }
 
         .style-switch button.active {
@@ -287,17 +295,26 @@
             color: var(--accent);
         }
 
+        /* Timer Stage — shared fixed-height area for every clock style.
+           Keeps the card a constant size regardless of the selected style;
+           the active display is centered within it. */
+        .timer-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: clamp(260px, 40vh, 440px);
+        }
+
         /* Timer Display - Minimal Style */
         .timer-display {
             font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-            font-size: clamp(4rem, 15vw, 13rem);
+            font-size: clamp(4rem, 14vw, 12rem);
             line-height: 1;
             font-weight: 500;
             letter-spacing: 2px;
-            margin-bottom: 50px;
             font-variant-numeric: tabular-nums;
             color: var(--accent);
-            transition: all 0.4s ease;
+            transition: color 0.4s ease;
         }
 
         .timer-display.hidden { display: none; }
@@ -305,9 +322,9 @@
         /* Timer Display - Circular Progress Style */
         .timer-circular {
             position: relative;
-            width: clamp(240px, 40vh, 520px);
-            height: clamp(240px, 40vh, 520px);
-            margin: 0 auto 50px;
+            width: clamp(240px, 38vh, 420px);
+            height: clamp(240px, 38vh, 420px);
+            margin: 0 auto;
             display: none;
         }
         .timer-circular.active {
@@ -347,7 +364,6 @@
             justify-content: center;
             align-items: center;
             gap: 10px;
-            margin-bottom: 50px;
         }
         .timer-flip.active { display: flex; }
 

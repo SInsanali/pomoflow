@@ -35,15 +35,11 @@
                 <button class="mode-tab" data-mode="longBreak" onclick="switchMode('longBreak')">Long Break</button>
             </div>
 
-            <!-- Clock Style Switcher -->
-            <div class="style-switch" role="tablist" aria-label="Clock style">
-                <button type="button" data-style="minimal">Minimal</button>
-                <button type="button" data-style="circular">Circular</button>
-                <button type="button" data-style="flip">Flip</button>
-            </div>
-
-            <!-- Timer Display - Minimal -->
-            <div class="timer-display" id="timer-display">25:00</div>
+            <!-- Timer Stage: fixed-height area so switching clock styles never
+                 resizes the card (all three styles are centered within it). -->
+            <div class="timer-stage">
+                <!-- Timer Display - Minimal -->
+                <div class="timer-display" id="timer-display">25:00</div>
 
             <!-- Timer Display - Circular -->
             <div class="timer-circular" id="timer-circular">
@@ -87,6 +83,7 @@
                     </div>
                 </div>
             </div>
+            </div><!-- /.timer-stage -->
 
             <!-- Timer Controls -->
             <div class="timer-controls">
@@ -108,6 +105,30 @@
                         <button onclick="adjustGoal(1)">+</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Clock Style Switcher (bottom): icon-only, minimal -->
+            <div class="style-switch" role="tablist" aria-label="Clock style">
+                <button type="button" data-style="minimal" title="Minimal" aria-label="Minimal clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M6 9v6" />
+                        <path d="M18 9v6" />
+                        <circle cx="12" cy="10" r="1" fill="currentColor" stroke="none" />
+                        <circle cx="12" cy="14" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                </button>
+                <button type="button" data-style="circular" title="Circular" aria-label="Circular clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="8" opacity="0.35" />
+                        <path d="M12 4a8 8 0 0 1 5.66 13.66" />
+                    </svg>
+                </button>
+                <button type="button" data-style="flip" title="Flip" aria-label="Flip clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="6" width="16" height="12" rx="2" />
+                        <path d="M4 12h16" />
+                    </svg>
+                </button>
             </div>
         </section>
 
