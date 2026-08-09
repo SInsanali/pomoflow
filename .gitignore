@@ -17,6 +17,9 @@ pomoflow.db-wal
 pomoflow.db-shm
 .chrome-profile/
 
+# Personal focus history exported from v1 — never publish
+v1-data-export.json
+
 # macOS
 .DS_Store
 .AppleDouble
