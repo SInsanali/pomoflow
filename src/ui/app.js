@@ -43,6 +43,9 @@ const getState = () => surface.state;
 // Settings live in storage, not in this page. Patch, persist, then let the
 // storage.onChanged listener in surface.js pull everyone back into line.
 async function patchSettings(patch) {
+    // The first GET_STATE lands a few milliseconds after the page script runs,
+    // so a very early click could otherwise read a null snapshot.
+    if (!getState()) await surface.refresh();
     const { settings } = getState();
     await db.putSettings({ ...settings, ...patch });
     await surface.refresh();
@@ -128,17 +131,18 @@ document.addEventListener('keydown', (e) => {
 // ===== pop-out chrome =====
 
 if (isPopout) {
-    // The pop-out is a timer, not a workspace: drop the nav and the dashboard
-    // so the window can be small enough to park beside real work.
+    // The pop-out is a timer, not a workspace: hide the nav so the window can
+    // be small enough to park beside real work. The dashboard markup stays in
+    // the document (hidden) rather than being removed — showView() and the
+    // listener below both reach for it, and a removed node would throw.
     document.querySelector('.app-nav').hidden = true;
-    el('view-dashboard').remove();
     document.body.classList.add('popout');
 }
 
 // The dashboard is only re-read when it is the visible view, so a running
 // timer does not repeatedly re-render charts nobody is looking at.
 chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.sessions && !el('view-dashboard')?.hidden) {
+    if (area === 'local' && changes.sessions && !el('view-dashboard').hidden) {
         renderDashboard(db);
     }
 });
