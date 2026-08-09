@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomoflow</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<!-- Note: no inline event handlers anywhere in this file. MV3's content
+     security policy forbids them, so every control below is wired up with
+     addEventListener in app.js / settings-panel.js / theme-editor.js. -->
+<body>
+    <header class="app-header">
+        <nav class="app-nav" aria-label="Primary">
+            <a href="#timer" id="nav-timer" class="nav-active">Timer</a>
+            <a href="#dashboard" id="nav-dashboard">Dashboard</a>
+        </nav>
+        <div class="app-header-actions">
+            <button class="settings-btn" id="popout-btn" title="Open in its own window" aria-label="Pop out">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h6v6" />
+                    <path d="M10 14 21 3" />
+                    <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                </svg>
+            </button>
+            <button class="settings-btn" id="settings-btn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== TIMER VIEW ===== -->
+    <div class="container" id="view-timer">
+        <section class="timer-section">
+            <div class="mode-tabs">
+                <button class="mode-tab active" data-mode="pomodoro">Pomodoro</button>
+                <button class="mode-tab" data-mode="shortBreak">Short Break</button>
+                <button class="mode-tab" data-mode="longBreak">Long Break</button>
+            </div>
+
+            <!-- Fixed-height stage so switching clock styles never resizes the
+                 card; all three styles are centered within it. -->
+            <div class="timer-stage" id="timer-stage">
+                <div class="timer-display" id="timer-display">25:00</div>
+
+                <div class="timer-circular" id="timer-circular">
+                    <svg class="timer-ring" viewBox="0 0 100 100">
+                        <circle class="ring-bg" cx="50" cy="50" r="45" />
+                        <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="45"
+                                stroke-dasharray="283" stroke-dashoffset="0" />
+                    </svg>
+                    <div class="timer-text" id="timer-text-circular">25:00</div>
+                </div>
+
+                <div class="timer-flip" id="timer-flip">
+                    <div class="flip-group" id="flip-minutes">
+                        <div class="flip-card" data-digit="0">
+                            <div class="top"><span>2</span></div>
+                            <div class="bottom"><span>2</span></div>
+                            <div class="top-flip"><span>2</span></div>
+                            <div class="bottom-flip"><span>2</span></div>
+                        </div>
+                        <div class="flip-card" data-digit="1">
+                            <div class="top"><span>5</span></div>
+                            <div class="bottom"><span>5</span></div>
+                            <div class="top-flip"><span>5</span></div>
+                            <div class="bottom-flip"><span>5</span></div>
+                        </div>
+                    </div>
+                    <div class="flip-separator">:</div>
+                    <div class="flip-group" id="flip-seconds">
+                        <div class="flip-card" data-digit="2">
+                            <div class="top"><span>0</span></div>
+                            <div class="bottom"><span>0</span></div>
+                            <div class="top-flip"><span>0</span></div>
+                            <div class="bottom-flip"><span>0</span></div>
+                        </div>
+                        <div class="flip-card" data-digit="3">
+                            <div class="top"><span>0</span></div>
+                            <div class="bottom"><span>0</span></div>
+                            <div class="top-flip"><span>0</span></div>
+                            <div class="bottom-flip"><span>0</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timer-controls">
+                <button class="control-btn secondary" id="reset-btn" title="Reset">↺</button>
+                <button class="control-btn primary" id="start-btn">Start</button>
+                <button class="control-btn secondary" id="skip-btn" title="Skip">⏭</button>
+            </div>
+
+            <div class="session-stats">
+                <div class="session-counter" id="session-counter">Study 1</div>
+                <div class="session-meta">
+                    <div class="streak-display" id="streak-display" title="Total pomodoros completed">
+                        <span id="streak-count">0</span> completed
+                    </div>
+                    <div class="goal-display">
+                        <button id="goal-down">−</button>
+                        <span class="goal-progress"><span id="goal-current">0</span>/<span id="goal-target">4</span></span>
+                        <button id="goal-up">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="style-switch" role="tablist" aria-label="Clock style">
+                <button type="button" data-style="minimal" title="Minimal" aria-label="Minimal clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M6 9v6" />
+                        <path d="M18 9v6" />
+                        <circle cx="12" cy="10" r="1" fill="currentColor" stroke="none" />
+                        <circle cx="12" cy="14" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                </button>
+                <button type="button" data-style="circular" title="Circular" aria-label="Circular clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="8" opacity="0.35" />
+                        <path d="M12 4a8 8 0 0 1 5.66 13.66" />
+                    </svg>
+                </button>
+                <button type="button" data-style="flip" title="Flip" aria-label="Flip clock style">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="6" width="16" height="12" rx="2" />
+                        <path d="M4 12h16" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <footer>
+Space: start/pause  ||  R: reset  ||  N: next
+        </footer>
+    </div>
+
+    <!-- ===== DASHBOARD VIEW ===== -->
+    <main class="dash" id="view-dashboard" hidden>
+        <section class="tiles">
+            <div class="tile">
+                <span class="tile-value" id="t-today">–</span>
+                <span class="tile-label">Today</span>
+            </div>
+            <div class="tile">
+                <span class="tile-value" id="t-week">–</span>
+                <span class="tile-label">This week</span>
+            </div>
+            <div class="tile">
+                <span class="tile-value" id="t-blocks">–</span>
+                <span class="tile-label">All-time blocks</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Focus time · last 14 days</h2>
+            <div id="trends" class="chart"></div>
+        </section>
+
+        <section class="card">
+            <h2>Activity · last 17 weeks</h2>
+            <div id="heatmap" class="chart"></div>
+            <div class="heat-legend">
+                <span>Less</span>
+                <span class="heat-swatch lvl-0"></span>
+                <span class="heat-swatch lvl-1"></span>
+                <span class="heat-swatch lvl-2"></span>
+                <span class="heat-swatch lvl-3"></span>
+                <span class="heat-swatch lvl-4"></span>
+                <span>More</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Recent sessions</h2>
+            <div class="table-wrap">
+                <table id="log"></table>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== SETTINGS ===== -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" id="settings-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <h3>Color Theme</h3>
+                    <div class="theme-selector">
+                        <div class="recent-themes-row">
+                            <div class="recent-themes" id="recent-themes"></div>
+                            <button class="expand-btn" id="theme-expand-btn">
+                                <span class="expand-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="theme-grid-container" id="theme-grid-container">
+                            <div class="theme-grid" id="theme-grid"></div>
+                            <div id="custom-themes-section">
+                                <h4>Custom Themes</h4>
+                                <div class="custom-themes-row" id="custom-theme-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="theme-editor" id="theme-editor">
+                    <div class="theme-editor-header">
+                        <button class="back-btn" id="theme-editor-back">←</button>
+                        <h3 id="theme-editor-title">Create Theme</h3>
+                    </div>
+                    <div class="theme-editor-body">
+                        <input type="text" id="theme-name-input" placeholder="Theme name" maxlength="20">
+                        <div class="color-picker-row">
+                            <label>Pomodoro</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-pomodoro" value="#ff6b6b">
+                                <input type="text" id="color-pomodoro-hex" value="#ff6b6b" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="color-picker-row">
+                            <label>Short Break</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-short-break" value="#6bffb8">
+                                <input type="text" id="color-short-break-hex" value="#6bffb8" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="color-picker-row">
+                            <label>Long Break</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="color-long-break" value="#6bb3ff">
+                                <input type="text" id="color-long-break-hex" value="#6bb3ff" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="theme-preview">
+                            <div class="preview-swatch" id="preview-pomodoro"></div>
+                            <div class="preview-swatch" id="preview-short-break"></div>
+                            <div class="preview-swatch" id="preview-long-break"></div>
+                        </div>
+                        <div class="theme-editor-actions">
+                            <button class="action-btn primary" id="theme-save-btn">Save Theme</button>
+                            <button class="action-btn danger" id="delete-theme-btn" style="display:none;">Delete Theme</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Appearance</h3>
+                    <div class="setting-row">
+                        <label>Timer Font</label>
+                        <select id="setting-font" class="theme-select">
+                            <option value="system">System</option>
+                            <option value="inter">Inter</option>
+                            <option value="poppins">Poppins</option>
+                            <option value="montserrat">Montserrat</option>
+                            <option value="raleway">Raleway</option>
+                            <option value="jetbrains">JetBrains Mono</option>
+                            <option value="space">Space Mono</option>
+                            <option value="orbitron">Orbitron</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Color Background</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-color-bg" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Dark Background When Running</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-hide-bg-running">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Timer (minutes)</h3>
+                    <div class="setting-row">
+                        <label>Pomodoro</label>
+                        <input type="number" id="setting-pomodoro" min="1" max="60" value="25">
+                    </div>
+                    <div class="setting-row">
+                        <label>Short Break</label>
+                        <input type="number" id="setting-short-break" min="1" max="30" value="5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Long Break</label>
+                        <input type="number" id="setting-long-break" min="1" max="60" value="15">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Presets</h3>
+                    <p class="setting-hint">Save the current timing &amp; appearance as a named preset.</p>
+                    <div class="preset-save-row">
+                        <input type="text" id="preset-name-input" placeholder="Preset name" maxlength="30">
+                        <button class="action-btn" id="preset-save-btn">Save</button>
+                    </div>
+                    <div class="preset-list" id="preset-list"></div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Auto Start</h3>
+                    <div class="setting-row">
+                        <label>Auto-start Breaks</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-breaks" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Auto-start Pomodoros</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-pomodoros">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Sound</h3>
+                    <div class="setting-row">
+                        <label>Notification Sound</label>
+                        <select id="setting-sound" class="theme-select">
+                            <option value="chime">Chime</option>
+                            <option value="digital">Digital</option>
+                            <option value="gong">Gong</option>
+                            <option value="melody">Melody</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Volume</label>
+                        <input type="range" id="setting-volume" min="0" max="100" value="50">
+                        <span class="volume-value" id="volume-value">50%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Test Sound</label>
+                        <button class="test-sound-btn" id="test-sound-btn">Play</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>Desktop Notifications</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-notifications" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Data</h3>
+                    <p class="setting-hint">
+                        Uninstalling the extension deletes your history — export is the only backup.
+                    </p>
+                    <div class="setting-actions">
+                        <button class="action-btn" id="export-btn">Export Data</button>
+                        <button class="action-btn" id="import-btn">Import Data</button>
+                        <input type="file" id="import-file" accept=".json" style="display:none">
+                        <button class="action-btn danger" id="reset-defaults-btn">Reset to Defaults</button>
+                    </div>
+                    <div class="setting-hint" id="data-status" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

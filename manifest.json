@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Pomoflow",
+  "version": "2.0.0",
+  "description": "A minimalist Pomodoro timer with a clean UI and quality of life features.",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "alarms",
+    "notifications",
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/ui/popup.html",
+    "default_title": "Pomoflow",
+    "default_icon": {
+      "16": "src/icons/16.png",
+      "32": "src/icons/32.png",
+      "48": "src/icons/48.png",
+      "128": "src/icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "src/icons/16.png",
+    "32": "src/icons/32.png",
+    "48": "src/icons/48.png",
+    "128": "src/icons/128.png"
+  },
+  "commands": {
+    "toggle-timer": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Start or pause the timer"
+    },
+    "reset-timer": {
+      "suggested_key": { "default": "Alt+Shift+R" },
+      "description": "Reset the current block"
+    },
+    "skip-block": {
+      "suggested_key": { "default": "Alt+Shift+N" },
+      "description": "Skip to the next block"
+    },
+    "open-app": {
+      "suggested_key": { "default": "Alt+Shift+O" },
+      "description": "Open the full Pomoflow page"
+    }
+  }
+}

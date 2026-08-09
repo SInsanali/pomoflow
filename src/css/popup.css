@@ -1,0 +1,148 @@
+/* Popup-only overrides. app.css supplies the palette, the accent/mode
+   machinery and every shared component; this file just shrinks the layout into
+   the ~340px the toolbar popup gets, and adds the two controls that exist only
+   here (the cycle dots and the header actions). */
+
+body.popup {
+    width: 340px;
+    min-height: 0;
+    margin: 0;
+}
+
+.popup-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px 18px;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.popup-mode {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    transition: color 0.4s ease;
+}
+
+.popup-header-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.icon-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.icon-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-glass-hover);
+}
+
+/* Shrink the shared components that app.css sizes for a full page. */
+.popup .mode-tabs {
+    margin-bottom: 0;
+    width: 100%;
+    justify-content: stretch;
+}
+
+.popup .mode-tab {
+    flex: 1;
+    padding: 7px 4px;
+    font-size: 0.68rem;
+    letter-spacing: 0.2px;
+}
+
+.popup .timer-stage {
+    min-height: 190px;
+}
+
+.popup .timer-display {
+    font-size: 3.6rem;
+    letter-spacing: 1px;
+}
+
+.popup .timer-circular {
+    width: 180px;
+    height: 180px;
+}
+
+.popup .timer-circular .timer-text {
+    font-size: 2.1rem;
+}
+
+.popup .timer-controls {
+    margin: 0;
+}
+
+.popup .control-btn {
+    padding: 9px 16px;
+    font-size: 0.85rem;
+}
+
+.popup .control-btn.primary {
+    min-width: 104px;
+}
+
+/* Cycle dots — the four-pomodoro set at a glance. Maps onto the existing
+   pomodorosInCycle (0-3, resets after a long break). */
+.cycle-dots {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    justify-content: center;
+    min-height: 9px;
+}
+
+.cycle-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg-glass-hover);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.cycle-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.cycle-dot.current {
+    border-color: var(--accent);
+    transform: scale(1.25);
+}
+
+.popup-meta {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.4px;
+}

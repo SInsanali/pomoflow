@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pomoflow</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/popup.css">
+</head>
+<body class="popup">
+    <div class="popup-shell">
+        <header class="popup-header">
+            <span class="popup-mode" id="mode-label">Focus</span>
+            <div class="popup-header-actions">
+                <button id="popout-btn" class="icon-btn" title="Open in its own window" aria-label="Pop out">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h6v6" />
+                        <path d="M10 14 21 3" />
+                        <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                    </svg>
+                </button>
+                <button id="open-app-btn" class="icon-btn" title="Dashboard &amp; settings" aria-label="Open full page">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="mode-tabs" id="mode-tabs">
+            <button class="mode-tab" data-mode="pomodoro">Pomodoro</button>
+            <button class="mode-tab" data-mode="shortBreak">Short Break</button>
+            <button class="mode-tab" data-mode="longBreak">Long Break</button>
+        </div>
+
+        <!-- The popup omits the flip clock deliberately: it needs more room
+             than the ~800x600 popup cap comfortably allows. createSurface()
+             falls back to the minimal readout for anyone whose saved style is
+             flip, and the full page still honours it. -->
+        <div class="timer-stage" id="timer-stage">
+            <div class="timer-display" id="timer-display">25:00</div>
+            <div class="timer-circular" id="timer-circular">
+                <svg class="timer-ring" viewBox="0 0 100 100">
+                    <circle class="ring-bg" cx="50" cy="50" r="45" />
+                    <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="45"
+                            stroke-dasharray="283" stroke-dashoffset="0" />
+                </svg>
+                <div class="timer-text" id="timer-text-circular">25:00</div>
+            </div>
+        </div>
+
+        <div class="cycle-dots" id="cycle-dots" title="Pomodoros this cycle"></div>
+
+        <div class="timer-controls">
+            <button class="control-btn secondary" id="reset-btn" title="Reset">↺</button>
+            <button class="control-btn primary" id="start-btn">Start</button>
+            <button class="control-btn secondary" id="skip-btn" title="Skip">⏭</button>
+        </div>
+
+        <div class="popup-meta">
+            <span id="session-counter">Study 1</span>
+            <span id="goal-progress">0/4</span>
+        </div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,24 +1,11 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv/
-venv/
-ENV/
-
-# Config (runtime)
-.pomodoro_config.json
-
-# Runtime data & browser profile
-pomoflow.db
-pomoflow.db-wal
-pomoflow.db-shm
-.chrome-profile/
-
 # Personal focus history exported from v1 — never publish
 v1-data-export.json
+
+# Python (only tools/make-icons.py remains; the v1 server is gone)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
 
 # macOS
 .DS_Store

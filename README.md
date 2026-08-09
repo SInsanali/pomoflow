@@ -1,89 +1,130 @@
-# pomoflow
+# Pomoflow
 
-Minimalist Pomodoro timer backed by a small local Python service that logs every
-focus block, resumes your live timer after a refresh or reconnect, and shows a
-metrics dashboard.
+A minimalist Pomodoro timer as a Chrome extension. It logs every focus block,
+survives a browser restart mid-block, and shows a metrics dashboard.
 
-No dependencies. No accounts. No tracking. Works offline. Just focus.
+No accounts. No tracking. No network access. No host permissions — Pomoflow
+cannot see any page you visit.
 
-## Launch
+## Install
 
-**macOS:** double-click `Pomoflow.app`.
+Not on the Chrome Web Store yet, so load it unpacked:
 
-**Any platform:**
+1. Open `chrome://extensions`
+2. Turn on **Developer mode** (top right)
+3. Click **Load unpacked** and choose this repository's root folder
+4. Pin Pomoflow to the toolbar so you can see the badge
 
-```bash
-./pomoflow          # start the server if needed, open the timer
-./pomoflow stop     # stop the server
-```
+## Using it
 
-`./pomoflow` starts the local server (if it isn't already running) and opens the
-timer in its own Chrome app window (a dedicated profile, so it stays separate
-from your normal browsing). Without Chrome it falls back to your default browser.
+Click the toolbar icon for the popup — mode tabs, the clock, start/reset/skip,
+and the four cycle dots. The **pop-out** button opens the timer in its own
+chromeless window you can park on a second monitor; the **gear** opens the full
+page with the big clock, the dashboard, and settings.
 
-The server keeps running until you deliberately stop it — click **Quit** in the
-header, or run `./pomoflow stop`. Closing or refreshing the tab does **not** stop
-it, so your timer survives a reload.
+The timer does not live in any of those windows. Close the popup, close every
+tab, quit Chrome entirely — the block keeps its deadline and resolves correctly
+when you come back.
+
+**Ambient time:** the toolbar badge shows whole minutes remaining, tinted with
+the current mode's accent colour, and the icon tooltip shows `MM:SS`. Minutes
+rather than seconds is deliberate: Chrome's background alarms cannot fire more
+often than every 30 seconds, and an extension may not keep a background process
+alive just to tick a badge. For a live second-by-second clock, use the pop-out.
+
+**Global hotkeys** (rebindable at `chrome://extensions/shortcuts`):
+
+| Shortcut | Action |
+|---|---|
+| `Alt+Shift+P` | Start / pause |
+| `Alt+Shift+R` | Reset the block |
+| `Alt+Shift+N` | Skip to the next block |
+| `Alt+Shift+O` | Open the full page |
+
+With the popup or full page focused, the v1 keys still work: `Space`, `R`, `N`.
 
 ## Features
 
 - **Timer modes**: Pomodoro (25 min), Short Break (5 min), Long Break (15 min)
-- **Clock styles**: Minimal, Circular progress, Flip clock — switched right on the
-  timer screen, with a large layout that scales up on wide/ultrawide displays
-- **Timer fonts**: 7 built-in fonts (Inter, Poppins, Montserrat, Raleway,
-  JetBrains Mono, Space Mono, Orbitron)
-- **17 color themes** plus custom themes you create with per-mode color pickers
-- **Presets**: save the current timing + appearance as a named preset and apply
-  it in one click
-- **Durable settings**: preferences are stored server-side (SQLite) and survive
-  restarts; existing browser settings migrate automatically on first run
-- **Live-timer resume**: if you refresh or reconnect mid-block, the timer picks up
-  where it left off; a block that finished while you were away is logged once
+- **Clock styles**: Minimal, Circular progress, Flip clock (the flip clock and
+  the dashboard are full-page only — the popup is too small for them)
+- **Timer fonts**: 7 built-in (Inter, Poppins, Montserrat, Raleway, JetBrains
+  Mono, Space Mono, Orbitron)
+- **17 colour themes** plus custom themes with per-mode colour pickers
+- **Presets**: save the current timing + appearance as a named preset
+- **Desktop notifications and a sound** at the end of every block, whether or
+  not any Pomoflow window is open
 - **Dashboard**: today / this-week focus time, all-time block count, a 14-day
-  focus-time bar chart, a 17-week activity heatmap, and a recent-sessions log
-- **Session logging**: every completed block is recorded to a local SQLite
-  database, idempotently (no duplicates on resume)
-- **Cross-platform**: Windows, macOS, Linux, and WSL
-- **Keyboard shortcuts**: Space (start/pause), R (reset), N (next)
+  bar chart, a 17-week activity heatmap, and a recent-sessions log
+- **Session logging**, deduplicated by a client-generated UUID, so a block is
+  never recorded twice
+- **JSON export / import** — see Backups below
+- **Cycle model**: breaks start themselves, the next focus block waits for you.
+  A long break lands after every 4 pomodoros.
 
-## Requirements
+## Backups
 
-- Python 3.7+ (standard library only — `http.server`, `sqlite3`)
-- No external dependencies; no network access required
+**Uninstalling the extension deletes your history.** There is no database file
+to copy any more, so **Settings → Data → Export Data** is your only backup. It
+writes one JSON file containing sessions, settings, custom themes, and presets.
 
-## Configuration
+Import merges rather than replaces and skips sessions it already has, so
+importing the same file twice is harmless.
 
-- **Port**: defaults to `8888`. To change it, create/edit `.pomodoro_config.json`
-  in the repo root:
-
-  ```json
-  { "port": 8890 }
-  ```
-
-- **Data**: sessions, settings, and presets live in `pomoflow.db` (SQLite) in the
-  repo root. It is created on first run and is git-ignored.
+It also reads exports from v1 (both the SQLite dump and the older
+settings-only export), which is how you carry your history across.
 
 ## How it works
 
-1. `pomoflow.py` runs a local HTTP server that serves the pages in `web/` and a
-   small JSON REST API backed by SQLite (`db.py`).
-2. The `pomoflow` launcher ensures that server is up and opens an app-mode Chrome
-   window pointed at it.
-3. The timer persists a live snapshot to `localStorage`; on load it reconciles
-   that snapshot against the wall clock to resume, complete, or start fresh.
-4. Completed blocks POST to the API keyed by a client-generated UUID, so
-   re-posting the same block never creates a duplicate.
-5. The server has no inactivity timeout — it stops only via the Quit button or
-   `./pomoflow stop`.
+The one rule that shapes the whole design: **nothing counts down.**
+
+`chrome.storage.local` holds `endsAt`, an absolute timestamp. Every surface —
+badge, popup, full page, pop-out — derives `remaining = endsAt - now`. A missed
+tick, a suspended service worker, a closed popup, or a laptop that slept for an
+hour all resolve correctly on the next read, because there is no counter to
+drift.
+
+- **`src/background/service-worker.js`** is the only authority. It owns block
+  completion, the badge, notifications, and the cycle. It holds no in-memory
+  state that matters, because Chrome kills it after ~30 seconds idle.
+- Two alarms, deliberately: a **one-shot** alarm at `endsAt` for correctness,
+  and a **repeating 30s** alarm purely to refresh the badge. The second is
+  best-effort and self-correcting — a skipped fire still renders the right
+  number, since the badge is computed, never decremented.
+- **`src/core/`** is pure: no `chrome.*`, no DOM, every function takes `now`
+  explicitly. That is what makes the timer arithmetic unit-testable.
+- The popup and full page are **pure renderers**. They read a snapshot, send
+  commands, and re-render on `chrome.storage.onChanged` — which is why two open
+  surfaces stay in sync without talking to each other.
+- End-of-block audio plays from an **offscreen document**, since service workers
+  have no `AudioContext`. Sound failure never blocks block completion.
+
+A paused block stores `remainingMs` and drops `endsAt` entirely, so it cannot
+bleed wall-clock time while you are away.
 
 ## Development
 
-Run the test suites:
+```bash
+node --test tests/*.mjs     # timer arithmetic, storage, migration, charts
+python3 tools/make-icons.py # regenerate src/icons/*.png
+```
+
+There is no build step and no dependencies — the extension loads the source
+directly.
+
+## v1 (Python server)
+
+Pomoflow used to be a local Python HTTP server plus a launcher that opened a
+dedicated Chrome window. That version is preserved at the **`v1.0-server`** tag:
 
 ```bash
-python3 -m pytest -v        # server + database tests
-node --test tests/*.mjs     # client-logic tests (resume, chart geometry)
+git checkout v1.0-server
 ```
+
+The rewrite dropped the server, the port, the `.app` bundle, and the SQLite
+file. In exchange the extension gets a toolbar badge, notifications that fire
+with nothing open, and (next) site blocking during focus blocks — none of which
+a localhost page can do.
 
 ## License
 
