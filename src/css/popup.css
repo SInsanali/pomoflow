@@ -392,16 +392,13 @@ body.popup {
 }
 
 /* app.css sizes the font picker for the settings modal; the popup row is
-   tighter, and the list has to stay inside a ~500px sheet. */
+   tighter. The list's height is font-picker.js's business — all eight faces
+   fit in the sheet, so capping it here only put a scrollbar on them. */
 .popup .font-picker-toggle {
     padding: 6px 8px;
     border-radius: 9px;
     font-size: 0.74rem;
     gap: 6px;
-}
-
-.popup .font-picker-list {
-    max-height: 196px;
 }
 
 .popup .font-picker-option {

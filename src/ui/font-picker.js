@@ -85,36 +85,47 @@ export function showFontFaces(select) {
     select.before(picker);
     select.hidden = true;
 
-    // Whatever box would clip the list: the nearest scrolling ancestor (the
-    // popup's .qs-body, the full page's .modal-body) or the viewport.
-    function clipBounds() {
-        for (let node = picker.parentElement; node; node = node.parentElement) {
-            const overflowY = getComputedStyle(node).overflowY;
-            if (overflowY === 'auto' || overflowY === 'scroll') {
-                return node.getBoundingClientRect();
-            }
-        }
-        return { top: 0, bottom: window.innerHeight };
-    }
+    // Both surfaces put this control inside a scroll box — the popup's .qs-body,
+    // the full page's .modal-body — and a list positioned inside one is clipped
+    // to whatever is left of that box, which was about five of the eight rows.
+    // Fixed lifts it out of the box so it can use the whole surface; the price
+    // is that nothing anchors it to the button any more, so we do that here.
+    const GAP = 6;          // between the button and the list
+    const EDGE = 10;        // between the list and the surface's own edges
+    const MIN_HEIGHT = 120; // rather scroll than collapse to a sliver
 
-    // Both surfaces put this control inside a scroll box, and in the full page
-    // it sits at the very top of one — so a list long enough to pass the bottom
-    // edge would simply be cut off. Flip it above the button when that side has
-    // more room, and cap the height to whichever side it lands on.
-    const GAP = 14;
     function place() {
-        list.classList.remove('up');
+        // From a clean box: last open's cap would hide how tall the list wants
+        // to be, and its offsets would skew the correction at the end.
         list.style.maxHeight = '';
+        list.style.top = '0px';
+        list.style.left = '0px';
 
-        const bounds = clipBounds();
-        const rect = toggle.getBoundingClientRect();
-        const below = bounds.bottom - rect.bottom - GAP;
-        const above = rect.top - bounds.top - GAP;
-        if (list.scrollHeight <= below) return;
+        const anchor = toggle.getBoundingClientRect();
+        list.style.minWidth = `${anchor.width}px`;
 
-        const flip = above > below;
-        list.classList.toggle('up', flip);
-        list.style.maxHeight = `${Math.max(120, flip ? above : below)}px`;
+        // Below the button, unless it genuinely does not fit there and the
+        // other side has more room. Cap only when the chosen side is too
+        // short — an uncapped list is a list with no scrollbar.
+        const wanted = list.getBoundingClientRect().height;
+        const below = window.innerHeight - anchor.bottom - GAP - EDGE;
+        const above = anchor.top - GAP - EDGE;
+        const up = wanted > below && above > below;
+        const room = up ? above : below;
+        if (wanted > room) list.style.maxHeight = `${Math.max(MIN_HEIGHT, room)}px`;
+
+        // Still pinned at 0,0, so this reads both the list's final size and the
+        // origin its offsets are measured from.
+        const box = list.getBoundingClientRect();
+        const top = up ? anchor.top - GAP - box.height : anchor.bottom + GAP;
+        const left = Math.max(EDGE, anchor.right - box.width);
+
+        // That origin is not always the viewport: both surfaces blur their
+        // backdrop, and a filtered ancestor becomes the containing block of a
+        // fixed child. So aim in viewport coordinates and correct by wherever
+        // the list actually landed.
+        list.style.top = `${top - box.top}px`;
+        list.style.left = `${left - box.left}px`;
     }
 
     function open(isOpen) {
@@ -161,6 +172,15 @@ export function showFontFaces(select) {
     document.addEventListener('pointerdown', (e) => {
         if (!list.hidden && !picker.contains(e.target)) open(false);
     });
+
+    // A fixed list does not travel with the button, so re-anchor it whenever
+    // the surface underneath moves. Capture phase: scroll does not bubble, and
+    // the box that scrolls is the sheet, not the window.
+    for (const event of ['scroll', 'resize']) {
+        window.addEventListener(event, () => {
+            if (!list.hidden) place();
+        }, true);
+    }
 
     syncFontFace(select);
 }
