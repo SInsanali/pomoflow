@@ -13,7 +13,7 @@ Not on the Chrome Web Store yet, so load it unpacked:
 1. Open `chrome://extensions`
 2. Turn on **Developer mode** (top right)
 3. Click **Load unpacked** and choose this repository's root folder
-4. Pin Pomoflow to the toolbar so you can see the badge
+4. Pin Pomoflow to the toolbar so you can see the countdown
 
 ## Using it
 
@@ -30,11 +30,13 @@ The timer does not live in any of those windows. Close the popup, close every
 tab, quit Chrome entirely — the block keeps its deadline and resolves correctly
 when you come back.
 
-**Ambient time:** the toolbar badge shows whole minutes remaining, tinted with
-the current mode's accent colour, and the icon tooltip shows `MM:SS`. Minutes
-rather than seconds is deliberate: Chrome's background alarms cannot fire more
-often than every 30 seconds, and an extension may not keep a background process
-alive just to tick a badge. For a live second-by-second clock, use the pop-out.
+**Ambient time:** while a block runs, the toolbar icon *is* the number — the
+whole minutes remaining, drawn in the current mode's accent colour, with no mark
+behind it and no badge pill on top. The tooltip shows `MM:SS`. Idle, the static
+Pomoflow mark comes back. Minutes rather than seconds is deliberate: Chrome's
+background alarms cannot fire more often than every 30 seconds, and an extension
+may not keep a background process alive just to tick a clock. For a live
+second-by-second countdown, use the pop-out.
 
 **Global hotkeys** (rebindable at `chrome://extensions/shortcuts`):
 
@@ -83,18 +85,22 @@ settings-only export), which is how you carry your history across.
 The one rule that shapes the whole design: **nothing counts down.**
 
 `chrome.storage.local` holds `endsAt`, an absolute timestamp. Every surface —
-badge, popup, full page, pop-out — derives `remaining = endsAt - now`. A missed
-tick, a suspended service worker, a closed popup, or a laptop that slept for an
-hour all resolve correctly on the next read, because there is no counter to
-drift.
+toolbar, popup, full page, pop-out — derives `remaining = endsAt - now`. A
+missed tick, a suspended service worker, a closed popup, or a laptop that slept
+for an hour all resolve correctly on the next read, because there is no counter
+to drift.
 
 - **`src/background/service-worker.js`** is the only authority. It owns block
-  completion, the badge, notifications, and the cycle. It holds no in-memory
-  state that matters, because Chrome kills it after ~30 seconds idle.
+  completion, the toolbar action, notifications, and the cycle. It holds no
+  in-memory state that matters, because Chrome kills it after ~30 seconds idle.
 - Two alarms, deliberately: a **one-shot** alarm at `endsAt` for correctness,
-  and a **repeating 30s** alarm purely to refresh the badge. The second is
+  and a **repeating 30s** alarm purely to repaint the icon. The second is
   best-effort and self-correcting — a skipped fire still renders the right
-  number, since the badge is computed, never decremented.
+  number, since it is computed from `endsAt`, never decremented.
+- **`src/background/icon.js`** rasterises that number. `chrome.action.setIcon`
+  only takes bitmaps and a service worker has no DOM canvas, so the minutes are
+  drawn with `OffscreenCanvas` at 16px and 32px, over a faint halo of the
+  opposite polarity so a pale accent survives a light toolbar and vice versa.
 - **`src/core/`** is pure: no `chrome.*`, no DOM, every function takes `now`
   explicitly. That is what makes the timer arithmetic unit-testable.
 - The popup and full page are **pure renderers**. They read a snapshot, send
@@ -111,6 +117,8 @@ bleed wall-clock time while you are away.
 ```bash
 node --test tests/*.mjs     # timer arithmetic, storage, migration, charts
 python3 tools/make-icons.py # regenerate src/icons/*.png
+python3 -m http.server 8731 # then open /tools/icon-preview.html to proof the
+                            # drawn minutes icon on light and dark toolbars
 ```
 
 There is no build step and no dependencies — the extension loads the source
@@ -126,9 +134,9 @@ git checkout v1.0-server
 ```
 
 The rewrite dropped the server, the port, the `.app` bundle, and the SQLite
-file. In exchange the extension gets a toolbar badge, notifications that fire
-with nothing open, and (next) site blocking during focus blocks — none of which
-a localhost page can do.
+file. In exchange the extension gets a live toolbar countdown, notifications
+that fire with nothing open, and (next) site blocking during focus blocks —
+none of which a localhost page can do.
 
 ## License
 

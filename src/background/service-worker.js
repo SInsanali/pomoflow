@@ -1,5 +1,5 @@
-// The authority. Owns block completion, the badge, notifications, and the
-// cycle. Every UI surface is a pure renderer that reads state and sends
+// The authority. Owns block completion, the toolbar action, notifications, and
+// the cycle. Every UI surface is a pure renderer that reads state and sends
 // commands here.
 //
 // The service worker is killed after ~30s idle, so it holds NO in-memory state
@@ -14,6 +14,7 @@ import {
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
 import { resolveTheme } from '../core/themes.js';
 import { store } from '../store/storage.js';
+import { timerIcon } from './icon.js';
 
 const ALARM_BLOCK_END = 'block-end';
 const ALARM_BADGE = 'badge-refresh';
@@ -37,23 +38,53 @@ function withLock(fn) {
     return result;
 }
 
-// ===== BADGE =====
+// ===== TOOLBAR ACTION =====
 
-async function renderBadge(timer, settings, customThemes) {
-    const now = Date.now();
-    const text = badgeText(timer, now);
-    await chrome.action.setBadgeText({ text });
+const DEFAULT_ICON = {
+    16: 'src/icons/16.png',
+    32: 'src/icons/32.png',
+    48: 'src/icons/48.png',
+    128: 'src/icons/128.png',
+};
 
-    if (text) {
-        const theme = resolveTheme(settings.theme, customThemes);
-        const color = theme[timer.mode] || theme.pomodoro;
-        await chrome.action.setBadgeBackgroundColor({ color });
-        // Chrome picks a contrasting badge text color itself on recent
-        // versions; setting it explicitly keeps older ones legible.
-        if (chrome.action.setBadgeTextColor) {
-            await chrome.action.setBadgeTextColor({ color: '#ffffff' });
+// While a block runs, the minutes ARE the icon: the number is drawn in the
+// theme accent and the badge is emptied, so nothing sits behind it. Idle (or a
+// runtime that cannot rasterise) falls back to the static mark, plus the badge
+// pill if there is still a number to show.
+//
+// This repaints unconditionally rather than caching the last (text, colour):
+// the action is only touched on the 30s tick and on commands, so two throwaway
+// canvas draws are cheaper than a cache that can go stale against a toolbar
+// Chrome resets on its own.
+async function paintAction(text, color) {
+    try {
+        const icon = timerIcon(text, color);
+        if (icon) {
+            await chrome.action.setIcon({ imageData: icon });
+            await chrome.action.setBadgeText({ text: '' });
+        } else {
+            await chrome.action.setIcon({ path: DEFAULT_ICON });
+            await chrome.action.setBadgeText({ text });
+            if (text) {
+                await chrome.action.setBadgeBackgroundColor({ color });
+                // Chrome picks a contrasting badge text color itself on recent
+                // versions; setting it explicitly keeps older ones legible.
+                if (chrome.action.setBadgeTextColor) {
+                    await chrome.action.setBadgeTextColor({ color: '#ffffff' });
+                }
+            }
         }
+    } catch (e) {
+        // A failed paint must never sink a tick that is also completing a
+        // block; the next tick paints again anyway.
+        console.warn('Pomoflow: could not paint the toolbar action', e);
     }
+}
+
+async function renderAction(timer, settings, customThemes) {
+    const now = Date.now();
+    const theme = resolveTheme(settings.theme, customThemes);
+    await paintAction(badgeText(timer, now), theme[timer.mode] || theme.pomodoro);
 
     const label = MODE_LABELS[timer.mode] || 'Pomoflow';
     const title = timer.isRunning
@@ -83,7 +114,7 @@ async function commit(timer) {
     const [{ data: settings }, customThemes] = await Promise.all([
         db.getSettings(), db.getCustomThemes(),
     ]);
-    await renderBadge(timer, settings, customThemes);
+    await renderAction(timer, settings, customThemes);
     return timer;
 }
 
@@ -193,7 +224,7 @@ async function tick() {
     const [{ data: settings }, customThemes] = await Promise.all([
         db.getSettings(), db.getCustomThemes(),
     ]);
-    await renderBadge(timer, settings, customThemes);
+    await renderAction(timer, settings, customThemes);
     return timer;
 }
 

@@ -21,7 +21,36 @@ const T0 = 1_760_000_000_000;
 // which is also closer to reality: one worker, many wake-ups.
 const storage = {};
 const listeners = {};
-const calls = { badge: [], titles: [], notifications: [], alarms: [], cleared: [], offscreen: [] };
+const calls = { badge: [], icon: [], titles: [], notifications: [], alarms: [], cleared: [], offscreen: [] };
+
+// The worker draws the minutes remaining straight onto the toolbar icon, so the
+// fake has to be able to rasterise. This one records what was drawn instead of
+// producing pixels: enough to assert the number and the theme colour reaching
+// chrome.action.setIcon, which is the part that can actually regress.
+class FakeOffscreenCanvas {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.drawn = null;
+  }
+
+  getContext() {
+    const canvas = this;
+    return {
+      font: "",
+      fillStyle: null,
+      clearRect() {},
+      measureText(text) {
+        const px = Number(/([\d.]+)px/.exec(this.font)?.[1] ?? 10);
+        return { width: text.length * px * 0.6, actualBoundingBoxAscent: px * 0.72 };
+      },
+      fillText(text) { canvas.drawn = { text, color: this.fillStyle }; },
+      getImageData() { return { ...canvas.drawn, size: canvas.width }; },
+    };
+  }
+}
+
+globalThis.OffscreenCanvas = FakeOffscreenCanvas;
 
 function installFakeChrome() {
   const chrome = {
@@ -44,6 +73,9 @@ function installFakeChrome() {
     action: {
       setBadgeText: async ({ text }) => { calls.badge.push(text); },
       setBadgeBackgroundColor: async () => {},
+      setIcon: async ({ imageData, path }) => {
+        calls.icon.push(imageData ? imageData[16] : { text: null, path });
+      },
       setTitle: async ({ title }) => { calls.titles.push(title); },
     },
     notifications: {
@@ -97,7 +129,7 @@ async function freshWorker() {
   return { storage, listeners, calls };
 }
 
-test("starting a block schedules an exact-deadline alarm and shows the badge", async () => {
+test("starting a block schedules an exact-deadline alarm and draws the minutes", async () => {
   const { listeners, calls, storage } = await freshWorker();
 
   const state = await sendMessage(listeners, { type: "START" });
@@ -110,7 +142,22 @@ test("starting a block schedules an exact-deadline alarm and shows the badge", a
 
   const badgeAlarm = calls.alarms.find(a => a.name === "badge-refresh");
   assert.equal(badgeAlarm.periodInMinutes, 0.5, "30s is the repeating alarm floor");
-  assert.equal(calls.badge.at(-1), "25");
+  assert.equal(calls.icon.at(-1).text, "25", "the minutes are the icon");
+  assert.equal(calls.icon.at(-1).color, "#e86a2c", "drawn in the dusk pomodoro accent");
+  assert.equal(calls.badge.at(-1), "", "no badge pill behind the number");
+});
+
+test("the drawn number follows the theme and the mode accent", async () => {
+  const { listeners, calls, storage } = await freshWorker();
+  storage.settings = { theme: "ocean" };
+
+  await sendMessage(listeners, { type: "START" });
+  assert.equal(calls.icon.at(-1).color, "#26c6da", "ocean pomodoro");
+
+  await sendMessage(listeners, { type: "SWITCH_MODE", mode: "shortBreak" });
+  await sendMessage(listeners, { type: "START" });
+  assert.equal(calls.icon.at(-1).color, "#29b6f6", "ocean short break");
+  assert.equal(calls.icon.at(-1).text, "5");
 });
 
 test("a block that ends with nothing open is logged once and advances the cycle", async () => {
@@ -178,6 +225,7 @@ test("pausing clears the deadline so time cannot bleed away", async () => {
   assert.equal(storage.timer.isRunning, false);
   assert.ok(storage.timer.remainingMs > 0);
   assert.equal(calls.badge.at(-1), "", "no badge while paused");
+  assert.equal(calls.icon.at(-1).text, null, "and the static mark comes back");
   assert.match(calls.titles.at(-1), /paused/);
   assert.equal(state.timer.isRunning, false);
 });
