@@ -216,8 +216,39 @@ body.popup {
     gap: 14px;
     flex: 1;
     /* A safety valve, not the plan: the sheet is sized to fit the popup as-is.
-       It only ever engages if a font stack renders taller than expected. */
+       It only ever engages if a font stack renders taller than the popup's 600px
+       ceiling leaves room for. */
     overflow-y: auto;
+    /* And it should cost as little as possible when it does. On a Mac set to
+       "always show scroll bars" Chrome draws a classic 15px bar, and a classic
+       bar is furniture: the gutter comes out of the padding box, so the sheet
+       lost 15px of row width and the grey slab landed against the toggles.
+       This pair moves that cost out to the sheet's own right padding — the box
+       grows 8px into it, the padding gives the 8px back, so the rows sit exactly
+       where they always did while the valve is shut, and the bar is 8px inset
+       from the popup edge rather than on top of a control when it opens. */
+    margin-right: -8px;
+    padding-right: 8px;
+}
+
+/* Styled rather than hidden: the valve is rare, but a sheet that scrolls with no
+   sign of it is a sheet with controls you cannot find. Dim enough to read as
+   part of the chrome, and only drawn while there is something to scroll. */
+.qs-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.qs-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.qs-body::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 999px;
+}
+
+.qs-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
 }
 
 .qs-block {

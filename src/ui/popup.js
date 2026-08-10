@@ -123,11 +123,31 @@ function loadQuickForm() {
 //
 // Measured rather than hardcoded: the sheet's height moves with the muted note,
 // and with whatever a font stack does to the row heights.
+//
+// Clamped, because Chrome caps a toolbar popup at 600px and scrolls the document
+// past that — which would carry the title and the reset button out of reach
+// instead of the row the .qs-body valve costs us.
+const POPUP_MAX_HEIGHT = 590;
+
 function fitSheet() {
     document.body.style.minHeight = '';
     const body = el('quick-settings').querySelector('.qs-body');
     const overflow = body.scrollHeight - body.clientHeight;
-    if (overflow > 0) document.body.style.minHeight = `${document.body.offsetHeight + overflow}px`;
+    if (overflow <= 0) return;
+    const wanted = document.body.offsetHeight + overflow;
+    document.body.style.minHeight = `${Math.min(wanted, POPUP_MAX_HEIGHT)}px`;
+}
+
+// A face that has not been fetched yet lays out in the fallback, so measuring
+// now sizes the popup for a sheet it is about to stop being: the swap-in grows
+// every row a little and the valve engages on rows that were meant to fit. That
+// is the scrollbar that showed up on Orbitron and not on Inter. Fit twice —
+// once for the sheet on screen, once for the one the faces leave behind.
+function fitSheetWhenFacesLand() {
+    fitSheet();
+    document.fonts?.ready.then(() => {
+        if (quickSettingsOpen()) fitSheet();
+    });
 }
 
 async function openQuickSettings() {
@@ -135,7 +155,7 @@ async function openQuickSettings() {
     loadQuickForm();
     el('quick-settings').hidden = false;
     el('quick-settings-btn').setAttribute('aria-expanded', 'true');
-    fitSheet();
+    fitSheetWhenFacesLand();
 }
 
 function closeQuickSettings() {
@@ -172,10 +192,13 @@ for (const [id, [key, min, max]] of Object.entries(DURATIONS)) {
 showFontFaces(el('qs-font'));
 
 // The font applies to the clock behind the sheet the moment it is patched:
-// surface.js writes --timer-font on every refresh, so the change previews
-// itself without any extra wiring here.
-el('qs-font').addEventListener('change', (e) =>
-    patchSettings({ timerFont: e.target.value }));
+// surface.js writes --timer-font on every refresh, so the change previews itself
+// with no extra wiring. The refit is the wiring it does need — the whole popup
+// wears that face, so picking one reflows the sheet under itself.
+el('qs-font').addEventListener('change', async (e) => {
+    await patchSettings({ timerFont: e.target.value });
+    fitSheetWhenFacesLand();
+});
 
 // Picking a chime plays it, the way an OS alert-sound list does. Two clicks to
 // hear each option would make the picker useless in a popup — and the play
