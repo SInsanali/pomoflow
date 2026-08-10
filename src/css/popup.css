@@ -162,9 +162,12 @@ body.popup {
     display: flex;
     flex-direction: column;
     padding: 14px 16px 16px;
-    /* Semi-opaque rather than solid so the mode accent behind it still reads
-       through when colorBackground is on. */
-    background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+    /* Tinted with the current mode accent, not just neutral glass. Picking a
+       theme from the grid above is otherwise invisible: the sheet covers the
+       clock that would show it, so the sheet has to carry the preview itself.
+       Semi-opaque so whatever colorBackground does behind still reads through. */
+    background: color-mix(in srgb, var(--accent) 14%,
+                 color-mix(in srgb, var(--bg-primary) 88%, transparent));
     backdrop-filter: blur(14px);
     animation: qs-in 0.16s ease-out;
 }
@@ -190,7 +193,25 @@ body.popup {
     font-weight: 500;
     letter-spacing: 1.4px;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    /* Accent, so the title is part of the theme preview too. */
+    color: var(--accent);
+}
+
+/* A shade bigger than the header buttons: it is the only way out of the sheet,
+   so it should not be the smallest thing in it. */
+.qs-home {
+    width: 32px;
+    height: 32px;
+    margin-right: -4px;   /* keep the glyph optically aligned with the edge */
+}
+
+.qs-home svg {
+    width: 19px;
+    height: 19px;
+}
+
+.qs-home:hover {
+    color: var(--accent);
 }
 
 .qs-body {

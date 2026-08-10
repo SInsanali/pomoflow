@@ -8,7 +8,7 @@
 
 import {
     reconcile, remaining, badgeText, formatTime, remainingSeconds,
-    idleTimer, startTimer, pauseTimer, resetTimer,
+    idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
     advanceCycle, shouldAutoStart, sessionRecord, blockInProgress, elapsedSeconds,
 } from '../core/clock.js';
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
@@ -87,9 +87,14 @@ async function renderAction(timer, settings, customThemes) {
     await paintAction(badgeText(timer, now), theme[timer.mode] || theme.pomodoro);
 
     const label = MODE_LABELS[timer.mode] || 'Pomoflow';
-    const title = timer.isRunning
-        ? `${label} — ${formatTime(remainingSeconds(timer, now))} remaining`
-        : `${label} — paused at ${formatTime(remainingSeconds(timer, now))}`;
+    let title;
+    if (timer.isRunning) {
+        title = `${label} — ${formatTime(remainingSeconds(timer, now))} remaining`;
+    } else if (timer.awaitingStart) {
+        title = `${label} — ready to start`;   // matches the "!" on the icon
+    } else {
+        title = `${label} — paused at ${formatTime(remainingSeconds(timer, now))}`;
+    }
     await chrome.action.setTitle({ title: `Pomoflow · ${title}` });
 }
 
@@ -194,10 +199,13 @@ async function completeBlock(timer, completedRecord) {
     const { nextMode, cycle: nextCycle } = advanceCycle(timer.mode, cycle);
     await db.setCycle(nextCycle);
 
+    // Auto-started blocks need no prompting. Anything else is now sitting there
+    // waiting on the user, which is what the toolbar's "!" is for — a
+    // notification is easy to miss, and the popup is closed by definition.
     let next = idleTimer(nextMode, settings);
-    if (shouldAutoStart(nextMode, settings)) {
-        next = startTimer(next, Date.now(), crypto.randomUUID());
-    }
+    next = shouldAutoStart(nextMode, settings)
+        ? startTimer(next, Date.now(), crypto.randomUUID())
+        : awaitingTimer(next);
     await commit(next);
 
     if (timer.mode === 'pomodoro') {

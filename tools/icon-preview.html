@@ -79,12 +79,12 @@
   // cyberpunk (vivid), and the sub-minute text.
   const cases = [
     ['25', '#e86a2c'], ['13', '#4a90d9'], ['5', '#e86a2c'],
-    ['25', '#e0e0e0'], ['<1', '#e86a2c'], ['10', '#29b6f6'], ['8', '#39ff14'],
+    ['25', '#e0e0e0'], ['!', '#e86a2c'], ['10', '#29b6f6'], ['1', '#39ff14'],
   ];
 
   // Sam's report came from the dusk short break, blue on a dark toolbar.
-  mock('mock-dark', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['25', '#e0e0e0']]);
-  mock('mock-light', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['25', '#e0e0e0']]);
+  mock('mock-dark', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['!', '#e86a2c']]);
+  mock('mock-light', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['!', '#e86a2c']]);
 
   for (const parent of ['light', 'dark']) {
     for (const [text, color] of cases) {

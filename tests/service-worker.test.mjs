@@ -204,6 +204,40 @@ test("a block that ends with nothing open is logged once and advances the cycle"
   }
 });
 
+test("a finished break marks the toolbar, because the next block waits on you", async () => {
+  // Breaks auto-start, pomodoros do not — so the end of a break is exactly the
+  // moment nothing happens next until the user acts.
+  const { listeners, calls, storage } = await freshWorker();
+  await sendMessage(listeners, { type: "START" });
+
+  const realNow = Date.now;
+  try {
+    let deadline = storage.timer.endsAt;
+    Date.now = () => deadline + 1_000;
+    await listeners.alarm({ name: "block-end" });
+    assert.equal(storage.timer.mode, "shortBreak");
+    assert.equal(storage.timer.isRunning, true, "the break started itself");
+    assert.notEqual(calls.icon.at(-1).text, "!", "nothing is waiting yet");
+
+    deadline = storage.timer.endsAt;
+    Date.now = () => deadline + 1_000;
+    await listeners.alarm({ name: "block-end" });
+
+    assert.equal(storage.timer.mode, "pomodoro");
+    assert.equal(storage.timer.isRunning, false);
+    assert.equal(storage.timer.awaitingStart, true);
+    assert.equal(calls.icon.at(-1).text, "!", "the toolbar asks for a decision");
+    assert.match(calls.titles.at(-1), /ready to start/);
+
+    // Starting it is what clears the mark.
+    await sendMessage(listeners, { type: "START" });
+    assert.equal(storage.timer.awaitingStart, false);
+    assert.equal(calls.icon.at(-1).text, "25");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
 test("two alarms racing on the same expired block do not double-log it", async () => {
   // The block-end alarm and the badge-refresh alarm can both notice the same
   // expired deadline. Without the lock and the dedupe, this is where history

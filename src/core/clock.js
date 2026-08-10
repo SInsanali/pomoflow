@@ -35,19 +35,25 @@ export function formatTime(totalSeconds) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// Toolbar badge text. Minutes only — a deliberate consequence of the 30s
+// What the toolbar shows when a finished block is waiting on a decision.
+export const ATTENTION = '!';
+
+// Toolbar text. Minutes only — a deliberate consequence of the 30s
 // chrome.alarms floor, not a shortcut: the service worker cannot be kept alive
-// for a per-second badge. Empty string means "clear the badge".
-// Derived from remainingSeconds, not from raw milliseconds, so the badge always
-// agrees with the MM:SS readout. Flooring the milliseconds instead would show
-// "24" the instant a 25-minute block starts, because a fraction of a
-// millisecond has already elapsed by the time the badge is drawn.
+// for a per-second countdown. Empty string means "show the static mark".
+//
+// Minutes are rounded UP, so a block reads its full duration the instant it
+// starts and the final minute reads "1". Rounding down would show "24" for
+// almost all of a 25-minute block's first minute, and needed a "<1" for the
+// last one — a stray sign in an icon that is otherwise pure digits.
 export function badgeText(timer, nowMs) {
-    if (!timer || !timer.isRunning) return '';
+    if (!timer) return '';
+    // A block that ENDED and left the next one needing a decision, and only
+    // that: a manual reset or mode switch is idle, not waiting.
+    if (!timer.isRunning) return timer.awaitingStart ? ATTENTION : '';
     const seconds = remainingSeconds(timer, nowMs);
     if (seconds <= 0) return '';
-    const mins = Math.floor(seconds / 60);
-    return mins >= 1 ? String(mins) : '<1';
+    return String(Math.ceil(seconds / 60));
 }
 
 // Build the session row for a finished block. Shape matches v1's sessions
@@ -116,7 +122,14 @@ export function idleTimer(mode, settings) {
         endsAt: null,
         remainingMs: planned * 1000,
         isRunning: false,
+        awaitingStart: false,
     };
+}
+
+// Flag an idle block as waiting on the user — the toolbar turns into "!" and
+// stays there until they act. Set only by block completion; see badgeText.
+export function awaitingTimer(timer) {
+    return { ...timer, awaitingStart: true };
 }
 
 // Start (or resume) a block.
@@ -142,6 +155,7 @@ export function startTimer(timer, nowMs, newBlockId) {
         endsAt: nowMs + remainingMs,
         remainingMs,
         isRunning: true,
+        awaitingStart: false,   // acting on it is what clears the "!"
     };
 }
 

@@ -38,6 +38,8 @@ export const DEFAULT_TIMER = {
     endsAt: null,
     remainingMs: DEFAULT_SETTINGS.pomodoroDuration * 60 * 1000,
     isRunning: false,
+    // True only between a block finishing and the user starting the next one.
+    awaitingStart: false,
 };
 
 // Pomodoros per cycle before a long break. v1 hardcoded 4 in

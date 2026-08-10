@@ -33,11 +33,18 @@ when you come back.
 
 **Ambient time:** while a block runs, the toolbar icon *is* the number — the
 whole minutes remaining, drawn in the current mode's accent colour, with no mark
-behind it and no badge pill on top. The tooltip shows `MM:SS`. Idle, the static
-Pomoflow mark comes back. Minutes rather than seconds is deliberate: Chrome's
-background alarms cannot fire more often than every 30 seconds, and an extension
-may not keep a background process alive just to tick a clock. For a live
-second-by-second countdown, use the pop-out.
+behind it and no badge pill on top. Minutes are rounded up, so the countdown
+ends …3, 2, 1. The tooltip shows `MM:SS`.
+
+When a block ends and the next one is **not** set to auto-start, the icon turns
+into a **`!`** and stays there until you act — a desktop notification is easy to
+miss, and the popup is closed by definition. Paused or merely idle, the static
+Pomoflow mark comes back.
+
+Minutes rather than seconds is deliberate: Chrome's background alarms cannot
+fire more often than every 30 seconds, and an extension may not keep a
+background process alive just to tick a clock. For a live second-by-second
+countdown, use the pop-out.
 
 **Global hotkeys** (rebindable at `chrome://extensions/shortcuts`):
 

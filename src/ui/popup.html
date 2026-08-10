@@ -80,10 +80,14 @@
     <div class="quick-settings" id="quick-settings" hidden>
         <div class="qs-head">
             <span class="qs-title">Quick settings</span>
-            <button class="icon-btn" id="qs-close" title="Close" aria-label="Close quick settings">
+            <!-- A house, not an ×: this does not dismiss anything, it takes you
+                 back to the timer, which is the popup's home. -->
+            <button class="icon-btn qs-home" id="qs-close" title="Back to the timer"
+                    aria-label="Back to the timer">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round">
-                    <path d="M18 6 6 18M6 6l12 12" />
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 10.5 12 3l9 7.5" />
+                    <path d="M5.5 9.5V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.5" />
                 </svg>
             </button>
         </div>

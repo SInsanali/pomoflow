@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   remaining, remainingSeconds, formatTime, badgeText,
-  reconcile, idleTimer, startTimer, pauseTimer, resetTimer,
+  reconcile, idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
   advanceCycle, shouldAutoStart, blockInProgress, elapsedSeconds, sessionLabel,
 } from "../src/core/clock.js";
 import { DEFAULT_SETTINGS, DEFAULT_CYCLE } from "../src/core/defaults.js";
@@ -122,13 +122,29 @@ test("breaks auto-start, focus blocks wait for you", () => {
   assert.equal(shouldAutoStart("pomodoro", settings), false);
 });
 
-test("badge shows whole minutes, then <1, then nothing", () => {
+test("the toolbar counts whole minutes down, rounding up", () => {
   const t = startTimer(idleTimer("pomodoro", settings), T0, "id-1");
   assert.equal(badgeText(t, T0), "25");
+  // Rounding UP is what keeps the first minute reading 25 and the last one
+  // reading 1, so no "<1" is ever needed.
+  assert.equal(badgeText(t, T0 + 1_000), "25", "one second in, still 25");
   assert.equal(badgeText(t, T0 + 60_000), "24");
-  assert.equal(badgeText(t, T0 + 1_470_000), "<1", "30s left");
+  assert.equal(badgeText(t, T0 + 1_470_000), "1", "30s left reads 1, not <1");
+  assert.equal(badgeText(t, T0 + 1_499_000), "1", "the final second still reads 1");
   assert.equal(badgeText(t, T0 + 1_500_000), "", "finished");
-  assert.equal(badgeText(pauseTimer(t, T0), T0), "", "paused shows no badge");
+  assert.equal(badgeText(pauseTimer(t, T0), T0), "", "paused shows the static mark");
+});
+
+test("a block waiting on the user shows an attention mark", () => {
+  const idle = idleTimer("pomodoro", settings);
+  assert.equal(badgeText(idle, T0), "", "merely idle is not waiting");
+
+  const waiting = awaitingTimer(idle);
+  assert.equal(badgeText(waiting, T0), "!");
+
+  // Acting on it is what clears the mark — otherwise the "!" would survive
+  // into the block it was asking the user to start.
+  assert.equal(badgeText(startTimer(waiting, T0, "id-2"), T0), "25");
 });
 
 test("blockInProgress ignores a fresh timer but catches a partial one", () => {
