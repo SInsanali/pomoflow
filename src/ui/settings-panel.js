@@ -3,6 +3,7 @@
 
 import { DEFAULT_SETTINGS } from '../core/defaults.js';
 import { send } from './surface.js';
+import { showFontFaces, syncFontFace } from './font-picker.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -11,6 +12,7 @@ export function createSettingsPanel({ db, getState, patchSettings, onRefresh, th
     function loadForm() {
         const { settings } = getState();
         el('setting-font').value = settings.timerFont || 'system';
+        syncFontFace(el('setting-font'));
         el('setting-color-bg').checked = settings.colorBackground;
         el('setting-hide-bg-running').checked = settings.hideBgWhenRunning;
         el('setting-pomodoro').value = settings.pomodoroDuration;
@@ -134,6 +136,8 @@ export function createSettingsPanel({ db, getState, patchSettings, onRefresh, th
     el('settings-modal').addEventListener('click', (e) => {
         if (e.target === el('settings-modal')) close();
     });
+
+    showFontFaces(el('setting-font'));
 
     // Live-apply the appearance controls so the clock behind the modal reacts
     // immediately, rather than waiting for the modal to close.

@@ -11,12 +11,6 @@ const SIZES = [16, 32];
 
 const FAMILY = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
-// Digits have no descender, so the glyph gets the full icon height. 0.72 is the
-// cap-height fraction of a typical UI sans; 0.94 leaves a hair of margin so the
-// outline is not clipped flat against the icon's edge.
-const CAP_RATIO = 0.72;
-const FILL = 0.94;
-
 // Heavy, because 16 device pixels is not much to carry a stroke.
 const WEIGHT = 700;
 
@@ -53,35 +47,59 @@ export function canDrawIcon() {
     return typeof OffscreenCanvas === 'function';
 }
 
+// The ink box of `text` at the current font, with fallbacks for runtimes whose
+// TextMetrics is partial. Requires textAlign 'center': the left/right extents
+// are reported relative to the alignment origin.
+function ink(ctx, text, px) {
+    const m = ctx.measureText(text);
+    const ascent = m.actualBoundingBoxAscent || px * 0.72;
+    const descent = m.actualBoundingBoxDescent || 0;
+    return {
+        ascent,
+        height: ascent + descent,
+        width: (m.actualBoundingBoxLeft + m.actualBoundingBoxRight) || m.width,
+    };
+}
+
 function drawOne(text, color, size) {
     const canvas = new OffscreenCanvas(size, size);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, size, size);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    // Half the outline sits outside the glyph on every side, so it has to come
+    // out of the budget before anything is sized — leaving it out is what
+    // clipped the digits flat against the bottom edge.
+    const lineWidth = size * OUTLINE;
+    const room = size - lineWidth;
+
+    // Scale from the MEASURED ink box rather than an assumed cap-height ratio.
+    // The ratio only has to be wrong by a few percent for the glyph to overrun
+    // the canvas, and the fallback face differs by platform.
+    const REF = 100;
+    ctx.font = `${WEIGHT} ${REF}px ${FAMILY}`;
+    const px = REF * (room / ink(ctx, text, REF).height);
+    ctx.font = `${WEIGHT} ${px}px ${FAMILY}`;
 
     // The glyph always gets the FULL height. Two digits are then condensed
     // horizontally to fit the width, rather than scaled down uniformly — a
     // uniform fit leaves "16" about 60% of the icon's height, which is what
     // made the first version read as small and thin next to other extensions.
-    const box = size * FILL;
-    const px = box / CAP_RATIO;
-    ctx.font = `${WEIGHT} ${px}px ${FAMILY}`;
-
-    const metrics = ctx.measureText(text);
-    const squeeze = metrics.width > box ? box / metrics.width : 1;
-    const ascent = metrics.actualBoundingBoxAscent || px * CAP_RATIO;
+    const box = ink(ctx, text, px);
+    const squeeze = box.width > room ? room / box.width : 1;
 
     ctx.save();
-    // Baseline sits so the cap is optically centred, then the horizontal
-    // condense happens around that centre.
-    ctx.translate(size / 2, (size + ascent) / 2);
+    // Centre the ink box itself. Centring the em box instead would sit the
+    // digits high, because an em box carries descender space that digits do
+    // not use.
+    ctx.translate(size / 2, (size - box.height) / 2 + box.ascent);
     ctx.scale(squeeze, 1);
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
     ctx.lineJoin = 'round';
     // The transform thins a vertical stroke by `squeeze`, so widen to compensate
     // and keep the outline even on all sides.
-    ctx.lineWidth = (size * OUTLINE) / squeeze;
+    ctx.lineWidth = lineWidth / squeeze;
     ctx.strokeStyle = outlineColor(color);
     ctx.strokeText(text, 0, 0);
     ctx.fillStyle = color;

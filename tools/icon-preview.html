@@ -17,6 +17,8 @@
   .dark  { background: #292a2d; color: #e8eaed; }
   figure { margin: 0; text-align: center; }
   canvas { image-rendering: pixelated; display: block; }
+  /* Marks the canvas edge, so a glyph running past it is obvious. */
+  .strip canvas { outline: 1px solid rgba(140, 140, 140, 0.55); }
   figcaption { margin-top: 6px; font-size: 11px; opacity: .7; }
   h3 { margin: 0; padding: 14px 20px 0; font: 600 12px system-ui; letter-spacing: .04em; text-transform: uppercase; }
   /* Chrome's toolbar geometry: a 28px hit target holding a 16px icon. */
@@ -76,8 +78,8 @@
   // dusk pomodoro, mono pomodoro (pale — worst case on white), ocean break,
   // cyberpunk (vivid), and the sub-minute text.
   const cases = [
-    ['25', '#e86a2c'], ['16', '#e86a2c'], ['5', '#e86a2c'],
-    ['25', '#e0e0e0'], ['<1', '#e86a2c'], ['15', '#29b6f6'], ['25', '#39ff14'],
+    ['25', '#e86a2c'], ['13', '#4a90d9'], ['5', '#e86a2c'],
+    ['25', '#e0e0e0'], ['<1', '#e86a2c'], ['10', '#29b6f6'], ['8', '#39ff14'],
   ];
 
   // Sam's report came from the dusk short break, blue on a dark toolbar.

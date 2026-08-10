@@ -5,6 +5,7 @@ import { createSurface, renderCycleDots, modeLabel, sessionLabel, send } from '.
 import { store } from '../store/storage.js';
 import { DEFAULT_SETTINGS, DEFAULT_CYCLE } from '../core/defaults.js';
 import { resolveTheme, withRecentTheme } from '../core/themes.js';
+import { showFontFaces, syncFontFace } from './font-picker.js';
 
 const el = (id) => document.getElementById(id);
 const db = store();
@@ -99,6 +100,7 @@ function loadQuickForm() {
     el('qs-auto-pomodoros').checked = settings.autoStartPomodoros;
     el('qs-notifications').checked = settings.notifications;
     el('qs-font').value = settings.timerFont || DEFAULT_SETTINGS.timerFont;
+    syncFontFace(el('qs-font'));
     el('qs-sound').value = settings.sound || DEFAULT_SETTINGS.sound;
     el('qs-muted').hidden = settings.volume > 0;
     renderThemeRow();
@@ -157,6 +159,8 @@ for (const [id, [key, min, max]] of Object.entries(DURATIONS)) {
         await surface.refresh();
     });
 }
+
+showFontFaces(el('qs-font'));
 
 // The font applies to the clock behind the sheet the moment it is patched:
 // surface.js writes --timer-font on every refresh, so the change previews
