@@ -329,9 +329,13 @@
 
         /* Timer Display - Circular Progress Style */
         .timer-circular {
+            /* One source of truth for the dial: the ring and the digits inside
+               it both scale from this, so the text can never outgrow the hole
+               it sits in. The popup overrides only this. */
+            --dial: clamp(240px, 38vh, 420px);
             position: relative;
-            width: clamp(240px, 38vh, 420px);
-            height: clamp(240px, 38vh, 420px);
+            width: var(--dial);
+            height: var(--dial);
             margin: 0 auto;
             display: none;
         }
@@ -360,7 +364,14 @@
         .timer-circular .timer-text {
             position: absolute;
             font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-            font-size: clamp(2rem, 7vw, 5rem);
+            /* Sized off the dial, not the viewport. The ring leaves a clear
+               inner radius of 0.41 * dial (r=45 less half of the 8-unit stroke,
+               on a 100-unit viewBox), and "21:30" in the widest face on offer
+               (Orbitron, ~3.6em across) needs a radius of ~1.85 * font-size to
+               clear its corners. 0.2 leaves that a comfortable margin; the old
+               7vw knew nothing about the dial and pushed the digits through the
+               ring on a wide window. */
+            font-size: calc(var(--dial) * 0.2);
             font-weight: 500;
             color: var(--accent);
             font-variant-numeric: tabular-nums;
