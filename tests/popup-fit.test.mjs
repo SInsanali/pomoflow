@@ -46,6 +46,12 @@ async function boot() {
     qsBody.className = 'qs-body';
     sheet.appendChild(qsBody);
     sheet.hidden = true;
+    // The other sheet over the timer. Hidden here so the box being measured is
+    // unambiguously this one — popup.html carries the attribute, the shim's
+    // auto-created nodes do not. Its own fitting is covered in popup-stats.
+    // getElementById, not registry.get: only ids in IDS are pre-created, and the
+    // stats sheet is not one this file otherwise touches.
+    document.getElementById('stats-sheet').hidden = true;
 
     // fitSheet clears body.minHeight before it measures, so both of these are
     // the natural, un-grown numbers every time — the same order the browser

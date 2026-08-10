@@ -3,12 +3,23 @@
    distinguishable for colorblind viewers) driven by CSS custom properties. */
 
 :root {
-    /* Empty + 4 intensity levels — GitHub-style green sequential ramp. */
+    /* Empty + 4 intensity levels, mixed from the theme's own focus accent rather
+       than the fixed GitHub green this used to be: the dashboard should look like
+       the theme the timer is wearing.
+
+       --pomodoro-accent, not --accent. Two reasons, and they agree:
+       * The grid plots focus time, so the focus colour is what it means. During a
+         break, --accent is the break colour and the ramp would be quietly lying.
+       * A var() inside a custom property on :root resolves against :root, so an
+         --accent here would never have followed body.short-break anyway.
+
+       Mixing toward --bg-primary rather than dropping alpha keeps the steps
+       opaque, so the grid does not shift when colorBackground tints the page. */
     --lvl-0: rgba(255, 255, 255, 0.06);
-    --lvl-1: #0e4429;
-    --lvl-2: #006d32;
-    --lvl-3: #26a641;
-    --lvl-4: #39d353;
+    --lvl-1: color-mix(in srgb, var(--pomodoro-accent) 26%, var(--bg-primary));
+    --lvl-2: color-mix(in srgb, var(--pomodoro-accent) 48%, var(--bg-primary));
+    --lvl-3: color-mix(in srgb, var(--pomodoro-accent) 72%, var(--bg-primary));
+    --lvl-4: var(--pomodoro-accent);
 }
 
 .dash {
@@ -40,10 +51,12 @@
     text-align: center;
 }
 
+/* Focus accent, matching the two charts below — every number on this page is
+   focus time, and switching to a break must not repaint the record of it. */
 .tile-value {
     font-size: clamp(1.8rem, 5vw, 2.8rem);
     font-weight: 600;
-    color: var(--accent);
+    color: var(--pomodoro-accent);
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
@@ -87,7 +100,7 @@
 }
 
 .bars rect {
-    fill: var(--accent);
+    fill: var(--pomodoro-accent);
     opacity: 0.85;
     transition: opacity 0.2s ease;
 }
