@@ -110,7 +110,11 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            /* `safe` matters: when the card is taller than the window, plain
+               centering overflows in both directions and the top of the card
+               becomes unreachable by scrolling. safe centering falls back to
+               flex-start in exactly that case. */
+            justify-content: safe center;
         }
         @media (min-width: 1600px) {
             .container { width: min(80vw, 1200px); }
@@ -1288,17 +1292,20 @@
             color: rgba(255, 100, 100, 0.9);
         }
 
-        /* Footer */
+        /* Footer — the keyboard legend.
+           NOT position: fixed. It used to be, and it collided with the card:
+           pinning it to the viewport takes it out of flow, so nothing reserves
+           its space, and a browser window shorter than the card (the flip clock
+           in a laptop window with bookmarks showing) put the style switcher and
+           the legend on top of each other. In flow it is simply the last item
+           in the column — it cannot overlap anything, at any window size. */
         footer {
             text-align: center;
-            padding: 30px 20px;
+            padding: 24px 20px 4px;
             color: rgba(255, 255, 255, 0.4);
             font-size: 0.75rem;
             letter-spacing: 0.5px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            flex-shrink: 0;
         }
 
         /* Landing / router page */

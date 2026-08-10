@@ -145,11 +145,6 @@ el('qs-auto-pomodoros').addEventListener('change', (e) =>
 el('qs-notifications').addEventListener('change', (e) =>
     patchSettings({ notifications: e.target.checked }));
 
-el('qs-popout').addEventListener('click', async () => {
-    await send('POP_OUT');
-    window.close();
-});
-
 // ===== RESET =====
 //
 // Two clicks, not a confirm(): a modal dialog raised from a toolbar popup can
@@ -157,17 +152,11 @@ el('qs-popout').addEventListener('click', async () => {
 // the second commits, and anything else disarms.
 let resetArmed = false;
 
-// The sheet is exactly as tall as the popup and cannot grow it, so the
-// explanation has to be paid for: arming swaps the pop-out row out for the
-// note. That keeps the footer the same height — nothing above it jumps or gets
-// scrolled out of reach — and an unrelated button that closes the popup is not
-// something to offer mid-confirmation anyway.
 function armReset(armed) {
     resetArmed = armed;
     el('qs-reset').textContent = armed ? 'Tap again to confirm' : 'Reset settings';
     el('qs-reset').classList.toggle('armed', armed);
     el('qs-reset-note').hidden = !armed;
-    el('qs-popout').hidden = armed;
 }
 
 // Session history is deliberately spared. It is not a "setting", and losing it
