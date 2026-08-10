@@ -20,9 +20,9 @@ Not on the Chrome Web Store yet, so load it unpacked:
 Click the toolbar icon for the popup — mode tabs, the clock, start/reset/skip,
 and the four cycle dots. The **open-in-new-tab** button opens the full page with
 the big clock, the dashboard, and every setting; the **gear** opens quick
-settings in place: recent themes, the timer font, the three durations, the
-chime (picking one plays it), auto-start, and notifications, with *Reset
-settings* at the bottom. Volume stays in the full page.
+settings in place: every theme, the timer font, the three durations, the chime
+(picking one plays it), auto-start, and notifications, with *Reset settings* at
+the bottom. Volume and the custom theme editor stay in the full page.
 
 The chromeless **pop-out** window — the one you park on a second monitor — is in
 the full page's own header.
@@ -100,12 +100,13 @@ to drift.
   number, since it is computed from `endsAt`, never decremented.
 - **`src/background/icon.js`** rasterises that number. `chrome.action.setIcon`
   only takes bitmaps and a service worker has no DOM canvas, so the minutes are
-  drawn with `OffscreenCanvas` at 16px and 32px. Two rules keep 16 pixels
-  legible: the glyph always takes the full icon height and a two-digit number is
-  **condensed horizontally** rather than scaled down (scaling down uniformly
-  leaves `16` at about 60% height, which reads as small beside other
-  extensions), and it carries a thin outline in the opposite polarity so a pale
-  accent survives a light toolbar and a dark one survives a dark toolbar.
+  drawn with `OffscreenCanvas` at 16px and 32px. What keeps 16 pixels legible:
+  the glyph always takes the full icon height, sized from its **measured** ink
+  box rather than an assumed cap ratio, and a two-digit number is **condensed
+  horizontally** rather than scaled down — scaling down uniformly leaves `16` at
+  about 60% height, which reads as small beside other extensions. The number is
+  flat accent colour with no outline; the cost is that a pale accent (mono,
+  coffee) is low contrast on a *light* toolbar.
 - **`src/core/`** is pure: no `chrome.*`, no DOM, every function takes `now`
   explicitly. That is what makes the timer arithmetic unit-testable.
 - The popup and full page are **pure renderers**. They read a snapshot, send

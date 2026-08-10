@@ -14,34 +14,14 @@ const FAMILY = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 // Heavy, because 16 device pixels is not much to carry a stroke.
 const WEIGHT = 700;
 
-// A crisp outline rather than a blurred glow: at this size a soft shadow just
-// smears the edge it is supposed to define. strokeText centres the stroke on
-// the glyph path, so half of this eats inwards — keep it thin, or the number
-// reads as hollow outlined text instead of a solid number with an edge.
-const OUTLINE = 1 / 16;
-
-export function relativeLuminance(hex) {
-    const match = /^#([0-9a-f]{6})$/i.exec(hex || '');
-    if (!match) return 0.5;
-    const rgb = parseInt(match[1], 16);
-    const channel = (byte) => {
-        const c = byte / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    };
-    return 0.2126 * channel((rgb >> 16) & 255)
-        + 0.7152 * channel((rgb >> 8) & 255)
-        + 0.0722 * channel(rgb & 255);
-}
-
-// A Chrome toolbar is near-white under a light theme and near-black under a
-// dark one, and one icon has to survive both. Outlining in the opposite
-// polarity keeps a pale accent (mono) legible on white and a dark accent
-// legible on charcoal, without tinting the number itself.
-export function outlineColor(hex) {
-    return relativeLuminance(hex) > 0.45
-        ? 'rgba(0, 0, 0, 0.8)'
-        : 'rgba(255, 255, 255, 0.8)';
-}
+// No outline. Earlier versions drew one in the opposite polarity so that a pale
+// accent would survive a light toolbar — but on a dark toolbar that put a white
+// rim around every saturated colour, which is worse than the problem it solved.
+// The number is now flat accent colour, and the whole icon height is its budget.
+//
+// The trade-off left standing: a pale accent (mono, coffee) on a LIGHT toolbar
+// is low contrast. Bring the outline back for the light-coloured half only if
+// that ever matters.
 
 export function canDrawIcon() {
     return typeof OffscreenCanvas === 'function';
@@ -68,11 +48,8 @@ function drawOne(text, color, size) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
 
-    // Half the outline sits outside the glyph on every side, so it has to come
-    // out of the budget before anything is sized — leaving it out is what
-    // clipped the digits flat against the bottom edge.
-    const lineWidth = size * OUTLINE;
-    const room = size - lineWidth;
+    // With no outline to budget for, the glyph gets the whole icon.
+    const room = size;
 
     // Scale from the MEASURED ink box rather than an assumed cap-height ratio.
     // The ratio only has to be wrong by a few percent for the glyph to overrun
@@ -96,12 +73,6 @@ function drawOne(text, color, size) {
     ctx.translate(size / 2, (size - box.height) / 2 + box.ascent);
     ctx.scale(squeeze, 1);
 
-    ctx.lineJoin = 'round';
-    // The transform thins a vertical stroke by `squeeze`, so widen to compensate
-    // and keep the outline even on all sides.
-    ctx.lineWidth = lineWidth / squeeze;
-    ctx.strokeStyle = outlineColor(color);
-    ctx.strokeText(text, 0, 0);
     ctx.fillStyle = color;
     ctx.fillText(text, 0, 0);
     ctx.restore();

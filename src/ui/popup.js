@@ -4,7 +4,7 @@
 import { createSurface, renderCycleDots, modeLabel, sessionLabel, send } from './surface.js';
 import { store } from '../store/storage.js';
 import { DEFAULT_SETTINGS, DEFAULT_CYCLE } from '../core/defaults.js';
-import { resolveTheme, withRecentTheme } from '../core/themes.js';
+import { THEMES, resolveTheme, withRecentTheme } from '../core/themes.js';
 import { showFontFaces, syncFontFace } from './font-picker.js';
 
 const el = (id) => document.getElementById(id);
@@ -61,15 +61,24 @@ function quickSettingsOpen() {
     return !el('quick-settings').hidden;
 }
 
-// The four recent themes, as three-stripe chips. The full grid — and the custom
-// theme editor — stays in the full page; this row is for flipping back to a
-// theme you already use.
+// Every theme, as three-stripe chips: the seventeen built-ins plus whatever
+// custom ones exist. Only the *editor* for custom themes stays in the full page
+// — picking one should never cost a trip out of the popup.
+//
+// Fixed order (customs first, then THEMES as declared), NOT most-recent-first:
+// chips that reshuffle under the cursor make the grid unlearnable. recentThemes
+// is still maintained on click, because the full page's strip reads it.
+function themeIds() {
+    const { customThemes } = surface.state;
+    return [...Object.keys(customThemes), ...Object.keys(THEMES)];
+}
+
 function renderThemeRow() {
     const { settings, customThemes } = surface.state;
     const row = el('qs-themes');
     row.innerHTML = '';
 
-    for (const themeId of settings.recentThemes) {
+    for (const themeId of themeIds()) {
         const theme = resolveTheme(themeId, customThemes);
         const chip = document.createElement('button');
         chip.className = 'qs-theme' + (settings.theme === themeId ? ' active' : '');

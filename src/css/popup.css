@@ -217,19 +217,22 @@ body.popup {
 }
 
 /* Recent themes, as three-stripe chips. */
+/* Every theme, not four — so this wraps into a grid instead of stretching a
+   single row. Fixed track width keeps the columns aligned as the custom themes
+   change the count. */
 .qs-themes {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 6px;
 }
 
 .qs-theme {
     display: flex;
-    flex: 1;
-    height: 26px;
+    height: 22px;
     padding: 0;
     overflow: hidden;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 7px;
     background: none;
     cursor: pointer;
     transition: border-color 0.2s ease, transform 0.2s ease;
