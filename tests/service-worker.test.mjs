@@ -39,11 +39,22 @@ class FakeOffscreenCanvas {
     return {
       font: "",
       fillStyle: null,
+      strokeStyle: null,
+      lineWidth: 0,
+      lineJoin: "",
       clearRect() {},
+      save() {},
+      restore() {},
+      translate() {},
+      scale() {},
       measureText(text) {
         const px = Number(/([\d.]+)px/.exec(this.font)?.[1] ?? 10);
         return { width: text.length * px * 0.6, actualBoundingBoxAscent: px * 0.72 };
       },
+      // The outline is drawn first and the fill over it, so recording on fill
+      // captures the colour that ends up on top — the one that has to track
+      // the theme.
+      strokeText() {},
       fillText(text) { canvas.drawn = { text, color: this.fillStyle }; },
       getImageData() { return { ...canvas.drawn, size: canvas.width }; },
     };

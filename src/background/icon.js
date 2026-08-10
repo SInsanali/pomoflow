@@ -12,10 +12,19 @@ const SIZES = [16, 32];
 const FAMILY = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 // Digits have no descender, so the glyph gets the full icon height. 0.72 is the
-// cap-height fraction of a typical UI sans, and 0.94 leaves a hair of margin so
-// the halo below is not clipped flat against the icon's edge.
+// cap-height fraction of a typical UI sans; 0.94 leaves a hair of margin so the
+// outline is not clipped flat against the icon's edge.
 const CAP_RATIO = 0.72;
-const FILL = 0.9;
+const FILL = 0.94;
+
+// Heavy, because 16 device pixels is not much to carry a stroke.
+const WEIGHT = 700;
+
+// A crisp outline rather than a blurred glow: at this size a soft shadow just
+// smears the edge it is supposed to define. strokeText centres the stroke on
+// the glyph path, so half of this eats inwards — keep it thin, or the number
+// reads as hollow outlined text instead of a solid number with an edge.
+const OUTLINE = 1 / 16;
 
 export function relativeLuminance(hex) {
     const match = /^#([0-9a-f]{6})$/i.exec(hex || '');
@@ -31,13 +40,13 @@ export function relativeLuminance(hex) {
 }
 
 // A Chrome toolbar is near-white under a light theme and near-black under a
-// dark one, and one icon has to survive both. A faint halo of the opposite
+// dark one, and one icon has to survive both. Outlining in the opposite
 // polarity keeps a pale accent (mono) legible on white and a dark accent
 // legible on charcoal, without tinting the number itself.
-export function haloColor(hex) {
+export function outlineColor(hex) {
     return relativeLuminance(hex) > 0.45
-        ? 'rgba(0, 0, 0, 0.7)'
-        : 'rgba(255, 255, 255, 0.7)';
+        ? 'rgba(0, 0, 0, 0.8)'
+        : 'rgba(255, 255, 255, 0.8)';
 }
 
 export function canDrawIcon() {
@@ -49,26 +58,35 @@ function drawOne(text, color, size) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, size, size);
 
-    // Start height-constrained, then shrink if two characters ("25", "<1")
-    // would overflow the width.
+    // The glyph always gets the FULL height. Two digits are then condensed
+    // horizontally to fit the width, rather than scaled down uniformly — a
+    // uniform fit leaves "16" about 60% of the icon's height, which is what
+    // made the first version read as small and thin next to other extensions.
     const box = size * FILL;
-    let px = box / CAP_RATIO;
-    ctx.font = `600 ${px}px ${FAMILY}`;
-    const width = ctx.measureText(text).width;
-    if (width > box) {
-        px *= box / width;
-        ctx.font = `600 ${px}px ${FAMILY}`;
-    }
+    const px = box / CAP_RATIO;
+    ctx.font = `${WEIGHT} ${px}px ${FAMILY}`;
 
     const metrics = ctx.measureText(text);
+    const squeeze = metrics.width > box ? box / metrics.width : 1;
     const ascent = metrics.actualBoundingBoxAscent || px * CAP_RATIO;
+
+    ctx.save();
+    // Baseline sits so the cap is optically centred, then the horizontal
+    // condense happens around that centre.
+    ctx.translate(size / 2, (size + ascent) / 2);
+    ctx.scale(squeeze, 1);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.shadowColor = haloColor(color);
-    ctx.shadowBlur = Math.max(1, size / 12);
+    ctx.lineJoin = 'round';
+    // The transform thins a vertical stroke by `squeeze`, so widen to compensate
+    // and keep the outline even on all sides.
+    ctx.lineWidth = (size * OUTLINE) / squeeze;
+    ctx.strokeStyle = outlineColor(color);
+    ctx.strokeText(text, 0, 0);
     ctx.fillStyle = color;
-    ctx.fillText(text, size / 2, (size + ascent) / 2);
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
 
     return ctx.getImageData(0, 0, size, size);
 }

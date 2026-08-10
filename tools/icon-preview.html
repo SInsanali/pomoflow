@@ -19,7 +19,19 @@
   canvas { image-rendering: pixelated; display: block; }
   figcaption { margin-top: 6px; font-size: 11px; opacity: .7; }
   h3 { margin: 0; padding: 14px 20px 0; font: 600 12px system-ui; letter-spacing: .04em; text-transform: uppercase; }
+  /* Chrome's toolbar geometry: a 28px hit target holding a 16px icon. */
+  .toolbar { display: flex; align-items: center; gap: 2px; padding: 14px 20px 18px; }
+  .action { width: 16px; height: 16px; padding: 6px; box-sizing: content-box; display: block; }
+  .disc { border-radius: 50%; }
 </style>
+<div class="dark">
+  <h3>actual size, beside a neighbour icon</h3>
+  <div class="toolbar" id="mock-dark"></div>
+</div>
+<div class="light">
+  <h3>actual size, beside a neighbour icon</h3>
+  <div class="toolbar" id="mock-light"></div>
+</div>
 <div class="light">
   <h3>light toolbar</h3>
   <div class="strip" id="light"></div>
@@ -31,12 +43,46 @@
 <script type="module">
   import { timerIcon } from '../src/background/icon.js';
 
+  // ===== actual-size mock =====
+  //
+  // The magnified sheet below is for judging the pixels; this row is for
+  // judging the thing that actually went wrong once — whether the number holds
+  // its own against the disc-shaped icons either side of it in the toolbar.
+  // Chrome gives each action a 28px button and draws the icon at 16 CSS px
+  // (from the 32px bitmap on a 2x display).
+  function mock(parent, cases) {
+    const row = document.getElementById(parent);
+    for (const [text, color] of cases) {
+      const src = new OffscreenCanvas(32, 32);
+      src.getContext('2d').putImageData(timerIcon(text, color)[32], 0, 0);
+
+      const out = document.createElement('canvas');
+      out.width = out.height = 32;
+      out.style.width = out.style.height = '16px';
+      out.getContext('2d').drawImage(src, 0, 0);
+      out.className = 'action';
+      row.append(out);
+    }
+    // Two filled discs stand in for the neighbours — same visual weight as the
+    // real ones, and the point of comparison is size, not artwork.
+    for (const fill of ['#d93025', '#1a73e8']) {
+      const disc = document.createElement('span');
+      disc.className = 'action disc';
+      disc.style.background = fill;
+      row.append(disc);
+    }
+  }
+
   // dusk pomodoro, mono pomodoro (pale — worst case on white), ocean break,
   // cyberpunk (vivid), and the sub-minute text.
   const cases = [
     ['25', '#e86a2c'], ['16', '#e86a2c'], ['5', '#e86a2c'],
     ['25', '#e0e0e0'], ['<1', '#e86a2c'], ['15', '#29b6f6'], ['25', '#39ff14'],
   ];
+
+  // Sam's report came from the dusk short break, blue on a dark toolbar.
+  mock('mock-dark', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['25', '#e0e0e0']]);
+  mock('mock-light', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['25', '#e0e0e0']]);
 
   for (const parent of ['light', 'dark']) {
     for (const [text, color] of cases) {

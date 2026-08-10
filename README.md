@@ -99,8 +99,12 @@ to drift.
   number, since it is computed from `endsAt`, never decremented.
 - **`src/background/icon.js`** rasterises that number. `chrome.action.setIcon`
   only takes bitmaps and a service worker has no DOM canvas, so the minutes are
-  drawn with `OffscreenCanvas` at 16px and 32px, over a faint halo of the
-  opposite polarity so a pale accent survives a light toolbar and vice versa.
+  drawn with `OffscreenCanvas` at 16px and 32px. Two rules keep 16 pixels
+  legible: the glyph always takes the full icon height and a two-digit number is
+  **condensed horizontally** rather than scaled down (scaling down uniformly
+  leaves `16` at about 60% height, which reads as small beside other
+  extensions), and it carries a thin outline in the opposite polarity so a pale
+  accent survives a light toolbar and a dark one survives a dark toolbar.
 - **`src/core/`** is pure: no `chrome.*`, no DOM, every function takes `now`
   explicitly. That is what makes the timer arithmetic unit-testable.
 - The popup and full page are **pure renderers**. They read a snapshot, send
