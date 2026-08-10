@@ -395,6 +395,24 @@ body.popup {
     color: var(--text-primary);
 }
 
+/* app.css sizes the font picker for the settings modal; the popup row is
+   tighter, and the list has to stay inside a ~500px sheet. */
+.popup .font-picker-toggle {
+    padding: 6px 8px;
+    border-radius: 9px;
+    font-size: 0.74rem;
+    gap: 6px;
+}
+
+.popup .font-picker-list {
+    max-height: 196px;
+}
+
+.popup .font-picker-option {
+    padding: 6px 9px;
+    font-size: 0.8rem;
+}
+
 .qs-inline {
     display: flex;
     align-items: center;

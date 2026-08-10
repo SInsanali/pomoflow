@@ -76,7 +76,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+            /* The chosen timer font dresses the WHOLE surface, not just the
+               clock — picking Orbitron and getting a system-font settings sheet
+               reads like the setting only half applied. surface.js keeps
+               --timer-font current, so this follows the picker everywhere. */
+            font-family: var(--timer-font, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif);
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -1134,6 +1138,98 @@
         .theme-select option {
             background: #1a1a1a;
             color: var(--text-primary);
+        }
+
+        /* Timer Font Picker — a list we draw rather than a <select>, because
+           Chrome renders the native menu in its own font on macOS and ignores
+           font-family on <option>, which defeats the whole point of previewing
+           a typeface. See src/ui/font-picker.js. */
+        .font-picker {
+            position: relative;
+            display: inline-block;
+            flex: none;
+        }
+
+        .font-picker-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .font-picker-toggle:hover,
+        .font-picker-toggle[aria-expanded="true"] {
+            border-color: var(--border-light);
+            background: var(--bg-glass-hover);
+        }
+
+        .font-picker-value {
+            flex: 1;
+            text-align: left;
+        }
+
+        .font-picker-toggle svg {
+            width: 14px;
+            height: 14px;
+            flex: none;
+            opacity: 0.7;
+        }
+
+        .font-picker-list {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            z-index: 50;
+            min-width: 100%;
+            max-height: 232px;
+            overflow-y: auto;
+            padding: 4px;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            /* Opaque: this floats over the settings behind it. */
+            background: var(--bg-primary);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Set by font-picker.js when there is more room above the button. */
+        .font-picker-list.up {
+            top: auto;
+            bottom: calc(100% + 6px);
+        }
+
+        .font-picker-option {
+            display: block;
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 7px;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-align: left;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .font-picker-option:hover,
+        .font-picker-option:focus-visible {
+            background: var(--bg-glass-hover);
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .font-picker-option.selected {
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 14%, transparent);
         }
 
         /* Test Sound Button */

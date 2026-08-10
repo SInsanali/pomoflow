@@ -63,7 +63,9 @@ With the popup or full page focused, the v1 keys still work: `Space`, `R`, `N`.
 - **Clock styles**: Minimal, Circular progress, Flip clock (the flip clock and
   the dashboard are full-page only — the popup is too small for them)
 - **Timer fonts**: 7 built-in (Inter, Poppins, Montserrat, Raleway, JetBrains
-  Mono, Space Mono, Orbitron)
+  Mono, Space Mono, Orbitron) plus the system face. The choice dresses the whole
+  surface, not just the clock, and the picker renders each name in its own face
+  so you can see what you are choosing
 - **17 colour themes** plus custom themes with per-mode colour pickers
 - **Presets**: save the current timing + appearance as a named preset
 - **Desktop notifications and a sound** at the end of every block, whether or
