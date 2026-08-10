@@ -20,9 +20,10 @@ Not on the Chrome Web Store yet, so load it unpacked:
 Click the toolbar icon for the popup — mode tabs, the clock, start/reset/skip,
 and the four cycle dots. The **open-in-new-tab** button opens the full page with
 the big clock, the dashboard, and every setting; the **gear** opens quick
-settings in place: every theme, the timer font, the three durations, the chime
-(picking one plays it), auto-start, and notifications, with *Reset settings* at
-the bottom. Volume and the custom theme editor stay in the full page.
+settings in place: every theme (plus **+** to build your own, and a pencil on
+each custom chip to edit or delete it), the timer font, the three durations, the
+chime (picking one plays it), auto-start, and notifications, with *Reset
+settings* at the bottom. Volume stays in the full page.
 
 The chromeless **pop-out** window — the one you park on a second monitor — is in
 the full page's own header.
@@ -66,7 +67,9 @@ With the popup or full page focused, the v1 keys still work: `Space`, `R`, `N`.
   Mono, Space Mono, Orbitron) plus the system face. The choice dresses the whole
   surface, not just the clock, and the picker renders each name in its own face
   so you can see what you are choosing
-- **17 colour themes** plus custom themes with per-mode colour pickers
+- **25 colour themes** — every accent legible on the dark surface (4.5:1 or
+  better) and the three modes visibly apart — plus custom themes with per-mode
+  colour pickers, editable from the popup or the full page
 - **Presets**: save the current timing + appearance as a named preset
 - **Desktop notifications and a sound** at the end of every block, whether or
   not any Pomoflow window is open
