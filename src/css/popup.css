@@ -157,7 +157,15 @@ body.popup {
     z-index: 10;
     display: flex;
     flex-direction: column;
-    padding: 14px 16px 16px;
+    padding: 14px 16px 14px;
+    /* Pinned, because this sheet's height is measured (fitSheet) to size the
+       popup, and body wears whatever --timer-font is set to. Under the default
+       `normal`, a line box is as tall as the face's own ascent+descent — so the
+       same row is a point or two taller in Orbitron than in Inter, the sheet
+       measured in one face and rendered in another, and the leftover became the
+       scrollbar. A number instead of `normal` makes every line box a function
+       of font-size alone, which no font swap changes. */
+    line-height: 1.25;
     /* Tinted with the current mode accent, not just neutral glass. Picking a
        theme from the grid above is otherwise invisible: the sheet covers the
        clock that would show it, so the sheet has to carry the preview itself.
@@ -181,7 +189,7 @@ body.popup {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .qs-title {
@@ -213,11 +221,14 @@ body.popup {
 .qs-body {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     flex: 1;
-    /* A safety valve, not the plan: the sheet is sized to fit the popup as-is.
-       It only ever engages if a font stack renders taller than the popup's 600px
-       ceiling leaves room for. */
+    /* A safety valve, not the plan: fitSheet grows the popup to whatever this
+       measures, and every box in the sheet is sized off font-size rather than
+       the face, so the measurement holds. What is left for the valve is content
+       that will not fit at any height — enough custom themes to push the sheet
+       past the popup's 600px ceiling. Not a font swap, which is what used to
+       open it. */
     overflow-y: auto;
     /* And it should cost as little as possible when it does. On a Mac set to
        "always show scroll bars" Chrome draws a classic 15px bar, and a classic
@@ -285,7 +296,7 @@ body.popup {
 .qs-theme {
     display: flex;
     width: 100%;
-    height: 22px;
+    height: 20px;
     padding: 0;
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -379,9 +390,14 @@ body.popup {
     color: var(--text-tertiary);
 }
 
+/* Height rather than padding, here and on every other control in the sheet: a
+   form control does not inherit the sheet's line-height (the UA sheet pins it to
+   `normal`), so padding + line-height is padding + whatever the face says. An
+   explicit height is the same box in all eight faces. */
 .qs-durations input[type="number"] {
     width: 100%;
-    padding: 7px 4px;
+    height: 32px;
+    padding: 0 4px;
     border: 1px solid var(--border-color);
     border-radius: 9px;
     background: var(--bg-glass);
@@ -402,6 +418,10 @@ body.popup {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    /* The toggle is 26px tall before .popup scales it, so the toggle rows are
+       already this height; the floor just makes the rest of them agree instead
+       of standing at whatever height their label happens to have. */
+    min-height: 26px;
     font-size: 0.78rem;
     color: var(--text-secondary);
 }
@@ -418,14 +438,15 @@ body.popup {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid var(--border-color);
 }
 
 .qs-reset {
     width: 100%;
-    padding: 9px;
+    height: 34px;
+    padding: 0 9px;
     border-radius: 10px;
     border: 1px solid var(--border-color);
     background: var(--bg-glass);
@@ -460,7 +481,8 @@ body.popup {
     /* No max-width: a <select> already sizes to its widest option, and capping
        it clipped "Chime" once the play button shared the row. */
     flex: none;
-    padding: 6px 8px;
+    height: 28px;
+    padding: 0 8px;
     border: 1px solid var(--border-color);
     border-radius: 9px;
     background: var(--bg-glass);
@@ -486,9 +508,14 @@ body.popup {
 
 /* app.css sizes the font picker for the settings modal; the popup row is
    tighter. The list's height is font-picker.js's business — all eight faces
-   fit in the sheet, so capping it here only put a scrollbar on them. */
+   fit in the sheet, so capping it here only put a scrollbar on them.
+
+   Fixed height for the same reason as the fields above, only more so: this is
+   the one control always rendered in the chosen face, since it names the face in
+   it, so it was the box that moved most when the file landed. */
 .popup .font-picker-toggle {
-    padding: 6px 8px;
+    height: 28px;
+    padding: 0 8px;
     border-radius: 9px;
     font-size: 0.74rem;
     gap: 6px;
@@ -555,7 +582,8 @@ body.popup {
 
 .qs-text {
     width: 100%;
-    padding: 8px 10px;
+    height: 34px;
+    padding: 0 10px;
     border: 1px solid var(--border-color);
     border-radius: 9px;
     background: var(--bg-glass);
@@ -587,7 +615,8 @@ body.popup {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 7px 4px;
+    height: 30px;
+    padding: 0 4px;
     border: 1px solid var(--border-color);
     border-radius: 9px;
     background: var(--bg-glass);
@@ -661,7 +690,8 @@ body.popup {
 .qs-hex {
     flex: none;
     width: 76px;
-    padding: 6px 8px;
+    height: 28px;
+    padding: 0 8px;
     border: 1px solid var(--border-color);
     border-radius: 9px;
     background: var(--bg-glass);
@@ -679,7 +709,8 @@ body.popup {
 
 .qs-btn {
     flex: 1;
-    padding: 9px;
+    height: 32px;
+    padding: 0 9px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-glass);

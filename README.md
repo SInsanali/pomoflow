@@ -133,7 +133,10 @@ bleed wall-clock time while you are away.
 ## Development
 
 ```bash
-node --test tests/*.mjs     # timer arithmetic, storage, migration, charts
+node --test tests/*.mjs     # timer arithmetic, storage, migration, charts,
+                            # themes, and the popup's sheet-fitting (behaviour
+                            # only — tests/helpers/popup-dom.mjs computes no
+                            # layout, so CSS still needs eyeballing in Chrome)
 python3 tools/make-icons.py # regenerate src/icons/*.png
 python3 -m http.server 8731 # then open /tools/icon-preview.html to proof the
                             # drawn minutes icon on light and dark toolbars
