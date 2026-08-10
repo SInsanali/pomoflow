@@ -8,6 +8,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// Read the accents rather than repeating them: what these tests care about is
+// that the icon follows the theme, not what shade of orange dusk is this year.
+import { THEMES } from "../src/core/themes.js";
 
 const T0 = 1_760_000_000_000;
 
@@ -154,7 +157,7 @@ test("starting a block schedules an exact-deadline alarm and draws the minutes",
   const badgeAlarm = calls.alarms.find(a => a.name === "badge-refresh");
   assert.equal(badgeAlarm.periodInMinutes, 0.5, "30s is the repeating alarm floor");
   assert.equal(calls.icon.at(-1).text, "25", "the minutes are the icon");
-  assert.equal(calls.icon.at(-1).color, "#e86a2c", "drawn in the dusk pomodoro accent");
+  assert.equal(calls.icon.at(-1).color, THEMES.dusk.pomodoro, "drawn in the dusk pomodoro accent");
   assert.equal(calls.badge.at(-1), "", "no badge pill behind the number");
 });
 
@@ -163,11 +166,11 @@ test("the drawn number follows the theme and the mode accent", async () => {
   storage.settings = { theme: "ocean" };
 
   await sendMessage(listeners, { type: "START" });
-  assert.equal(calls.icon.at(-1).color, "#26c6da", "ocean pomodoro");
+  assert.equal(calls.icon.at(-1).color, THEMES.ocean.pomodoro, "ocean pomodoro");
 
   await sendMessage(listeners, { type: "SWITCH_MODE", mode: "shortBreak" });
   await sendMessage(listeners, { type: "START" });
-  assert.equal(calls.icon.at(-1).color, "#29b6f6", "ocean short break");
+  assert.equal(calls.icon.at(-1).color, THEMES.ocean.shortBreak, "ocean short break");
   assert.equal(calls.icon.at(-1).text, "5");
 });
 
