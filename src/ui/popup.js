@@ -4,7 +4,10 @@
 import { createSurface, renderCycleDots, modeLabel, sessionLabel, send } from './surface.js';
 import { store } from '../store/storage.js';
 import { DEFAULT_SETTINGS, DEFAULT_CYCLE } from '../core/defaults.js';
-import { THEMES, resolveTheme, withRecentTheme } from '../core/themes.js';
+import {
+    THEMES, FALLBACK_THEME, accentVarForMode, hexToHsl, hslToHex, isValidColor,
+    resolveTheme, withRecentTheme,
+} from '../core/themes.js';
 import { showFontFaces, syncFontFace } from './font-picker.js';
 
 const el = (id) => document.getElementById(id);
@@ -26,6 +29,10 @@ const surface = createSurface({
         renderCycleDots(el('cycle-dots'), cycle, timer.mode);
 
         if (quickSettingsOpen()) renderThemeRow();
+        // applyAppearance() has just written the *saved* theme onto :root, so
+        // an unsaved draft has to repaint itself after every refresh or the
+        // preview blinks away the moment the service worker writes anything.
+        if (themeEditorOpen()) previewEditorColors();
     },
 });
 
@@ -61,16 +68,23 @@ function quickSettingsOpen() {
     return !el('quick-settings').hidden;
 }
 
-// Every theme, as three-stripe chips: the seventeen built-ins plus whatever
-// custom ones exist. Only the *editor* for custom themes stays in the full page
-// — picking one should never cost a trip out of the popup.
+// Every theme, as three-stripe chips: the built-ins plus whatever custom ones
+// exist, and a "+" to make another. Picking *or building* a theme should never
+// cost a trip out of the popup.
 //
 // Fixed order (customs first, then THEMES as declared), NOT most-recent-first:
 // chips that reshuffle under the cursor make the grid unlearnable. recentThemes
 // is still maintained on click, because the full page's strip reads it.
+const MODE_KEYS = ['pomodoro', 'shortBreak', 'longBreak'];
+
 function themeIds() {
     const { customThemes } = surface.state;
     return [...Object.keys(customThemes), ...Object.keys(THEMES)];
+}
+
+function themeName(themeId) {
+    const custom = surface.state.customThemes[themeId];
+    return (custom && custom.name) || themeId;
 }
 
 function renderThemeRow() {
@@ -80,13 +94,22 @@ function renderThemeRow() {
 
     for (const themeId of themeIds()) {
         const theme = resolveTheme(themeId, customThemes);
-        const chip = document.createElement('button');
-        chip.className = 'qs-theme' + (settings.theme === themeId ? ' active' : '');
-        chip.type = 'button';
-        // Custom theme names are user input: textContent, never innerHTML.
-        chip.title = (customThemes[themeId] && customThemes[themeId].name) || themeId;
+        const custom = Boolean(customThemes[themeId]);
 
-        for (const key of ['pomodoro', 'shortBreak', 'longBreak']) {
+        // The chip carries the pencil, so it needs a positioning parent — and
+        // the pencil has to be a sibling, because a <button> may not contain
+        // another one.
+        const cell = document.createElement('div');
+        cell.className = 'qs-theme-cell';
+
+        const chip = document.createElement('button');
+        chip.className = 'qs-theme' + (settings.theme === themeId ? ' active' : '') +
+            (custom ? ' custom' : '');
+        chip.type = 'button';
+        // Custom theme names are user input: textContent/title, never innerHTML.
+        chip.title = themeName(themeId);
+
+        for (const key of MODE_KEYS) {
             const stripe = document.createElement('span');
             stripe.style.background = theme[key];
             chip.appendChild(stripe);
@@ -96,9 +119,235 @@ function renderThemeRow() {
             theme: themeId,
             recentThemes: withRecentTheme(settings.recentThemes, themeId),
         }));
-        row.appendChild(chip);
+        cell.appendChild(chip);
+
+        if (custom) {
+            const edit = document.createElement('button');
+            edit.className = 'qs-theme-edit';
+            edit.type = 'button';
+            edit.textContent = '✎';
+            edit.title = `Edit ${themeName(themeId)}`;
+            edit.setAttribute('aria-label', `Edit ${themeName(themeId)}`);
+            edit.addEventListener('click', () => openThemeEditor(themeId));
+            cell.appendChild(edit);
+        }
+
+        row.appendChild(cell);
+    }
+
+    // Last, not first: choosing a theme is the common act, making one is not.
+    const add = document.createElement('button');
+    add.className = 'qs-theme qs-theme-new';
+    add.type = 'button';
+    add.textContent = '+';
+    add.title = 'New custom theme';
+    add.setAttribute('aria-label', 'New custom theme');
+    add.addEventListener('click', () => openThemeEditor());
+    row.appendChild(add);
+}
+
+// ===== CUSTOM THEME EDITOR =====
+//
+// null while closed, '' while creating, a theme id while editing one.
+let editingThemeId = null;
+let themeDeleteArmed = false;
+
+// The draft is held as HSL, not hex: dragging a slider through hex on every
+// frame would round-trip the other two channels and walk the colour sideways.
+// Hex is derived for display, and typing one re-seeds the draft.
+const draft = { pomodoro: null, shortBreak: null, longBreak: null };
+let draftMode = 'pomodoro';
+
+function themeEditorOpen() {
+    return editingThemeId !== null;
+}
+
+function editorColor(key) {
+    return hslToHex(draft[key]);
+}
+
+// Paint the draft straight onto :root. The sheet covers the clock, but it is
+// tinted with --accent, its title is drawn in it, and Save is filled with it —
+// so the preview lands on what the user is already looking at.
+function previewEditorColors() {
+    const root = document.documentElement;
+    for (const key of MODE_KEYS) {
+        root.style.setProperty(accentVarForMode(key), editorColor(key));
     }
 }
+
+const HUE_TRACK = 'linear-gradient(to right, ' +
+    [0, 60, 120, 180, 240, 300, 360]
+        .map(deg => hslToHex({ h: deg, s: 90, l: 60 })).join(', ') + ')';
+
+// Each track is painted with the axis it moves along — a rainbow for hue, grey
+// to full colour for saturation, black to white through the hue for lightness —
+// which is why the sliders carry no labels.
+function paintSliders() {
+    const { h, s, l } = draft[draftMode];
+
+    el('qs-hue').value = Math.round(h);
+    el('qs-sat').value = Math.round(s);
+    el('qs-light').value = Math.round(l);
+
+    el('qs-hue').style.background = HUE_TRACK;
+    el('qs-sat').style.background = 'linear-gradient(to right, ' +
+        `${hslToHex({ h, s: 0, l })}, ${hslToHex({ h, s: 100, l })})`;
+    // Through the draft's own saturation, so a grey stays a grey ramp.
+    el('qs-light').style.background =
+        `linear-gradient(to right, #000, ${hslToHex({ h, s, l: 50 })}, #fff)`;
+}
+
+function paintSwatches() {
+    for (const swatch of el('qs-mode-swatches').querySelectorAll('.qs-mode-swatch')) {
+        const mode = swatch.dataset.mode;
+        swatch.classList.toggle('active', mode === draftMode);
+        swatch.setAttribute('aria-pressed', String(mode === draftMode));
+        swatch.querySelector('i').style.background = editorColor(mode);
+    }
+}
+
+// One redraw for every way the draft can change.
+function renderDraft() {
+    el('qs-hex').value = editorColor(draftMode);
+    paintSliders();
+    paintSwatches();
+    previewEditorColors();
+}
+
+function armThemeDelete(armed) {
+    themeDeleteArmed = armed;
+    el('qs-theme-delete').textContent = armed ? 'Tap again to delete' : 'Delete theme';
+    el('qs-theme-delete').classList.toggle('armed', armed);
+}
+
+// No id: start from the theme in use rather than from an arbitrary colour —
+// "this, but the focus red is too loud" is how most custom themes begin.
+function openThemeEditor(themeId = '') {
+    const { settings, customThemes } = surface.state;
+    editingThemeId = customThemes[themeId] ? themeId : '';
+
+    const source = editingThemeId
+        ? customThemes[editingThemeId]
+        : resolveTheme(settings.theme, customThemes);
+    el('qs-theme-name').value = editingThemeId ? (source.name || '') : '';
+    for (const key of MODE_KEYS) draft[key] = hexToHsl(source[key]);
+    draftMode = 'pomodoro';
+
+    el('qs-title').textContent = editingThemeId ? 'Edit theme' : 'New theme';
+    el('qs-close').title = 'Back to quick settings';
+    el('qs-close').setAttribute('aria-label', 'Back to quick settings');
+    el('qs-theme-delete').hidden = !editingThemeId;
+    armThemeDelete(false);
+    armReset(false);
+
+    el('qs-theme-editor').hidden = false;
+    el('quick-settings').classList.add('editing');
+    renderDraft();
+    fitSheet();
+    el('qs-theme-name').focus();
+}
+
+function closeThemeEditor() {
+    editingThemeId = null;
+    el('qs-theme-editor').hidden = true;
+    el('quick-settings').classList.remove('editing');
+    el('qs-title').textContent = 'Quick settings';
+    el('qs-close').title = 'Back to the timer';
+    el('qs-close').setAttribute('aria-label', 'Back to the timer');
+    armThemeDelete(false);
+    // Drops the draft accents: applyAppearance() rewrites all three from what
+    // is actually stored.
+    surface.refresh();
+    fitSheet();
+}
+
+async function saveTheme() {
+    const { settings, customThemes } = surface.state;
+    const existing = editingThemeId ? customThemes[editingThemeId] : null;
+    const themeId = editingThemeId || `custom-${Date.now()}`;
+    const name = el('qs-theme-name').value.trim() ||
+        `Custom ${Object.keys(customThemes).length + 1}`;
+
+    await db.setCustomThemes({
+        ...customThemes,
+        [themeId]: {
+            name,
+            pomodoro: editorColor('pomodoro'),
+            shortBreak: editorColor('shortBreak'),
+            longBreak: editorColor('longBreak'),
+            createdAt: existing ? existing.createdAt : Date.now(),
+        },
+    });
+    // Saving selects it — building a theme you then have to go and click is
+    // busywork, and it is how the full page has always behaved.
+    await patchSettings({
+        theme: themeId,
+        recentThemes: withRecentTheme(settings.recentThemes, themeId),
+    });
+    closeThemeEditor();
+}
+
+async function deleteTheme() {
+    const { settings, customThemes } = surface.state;
+    if (!editingThemeId || !customThemes[editingThemeId]) return closeThemeEditor();
+
+    const next = { ...customThemes };
+    delete next[editingThemeId];
+    await db.setCustomThemes(next);
+
+    const patch = {
+        recentThemes: (settings.recentThemes || []).filter(id => id !== editingThemeId),
+    };
+    // Never leave a surface pointing at a theme that no longer exists.
+    if (settings.theme === editingThemeId) patch.theme = FALLBACK_THEME;
+    await patchSettings(patch);
+    closeThemeEditor();
+}
+
+el('qs-mode-swatches').addEventListener('click', (e) => {
+    const swatch = e.target.closest('.qs-mode-swatch');
+    if (!swatch) return;
+    draftMode = swatch.dataset.mode;
+    renderDraft();
+});
+
+for (const [id, channel] of [['qs-hue', 'h'], ['qs-sat', 's'], ['qs-light', 'l']]) {
+    el(id).addEventListener('input', (e) => {
+        draft[draftMode][channel] = Number(e.target.value);
+        renderDraft();
+    });
+}
+
+// Typing re-seeds the draft, but only once the field holds a whole colour —
+// otherwise "#1a" mid-type would snap the sliders to black. Deliberately not a
+// full renderDraft(): rewriting the field under the cursor moves it.
+el('qs-hex').addEventListener('input', (e) => {
+    if (!isValidColor(e.target.value.trim())) return;
+    draft[draftMode] = hexToHsl(e.target.value.trim());
+    paintSliders();
+    paintSwatches();
+    previewEditorColors();
+});
+
+el('qs-theme-save').addEventListener('click', saveTheme);
+el('qs-theme-cancel').addEventListener('click', closeThemeEditor);
+el('qs-theme-delete').addEventListener('click', () => {
+    if (themeDeleteArmed) return deleteTheme();
+    armThemeDelete(true);
+});
+
+// Enter commits from any field — the popup is a place for short interactions.
+el('qs-theme-editor').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    saveTheme();
+});
+
+// Anything else in the editor disarms a primed delete, same rule as the reset.
+el('qs-theme-editor').addEventListener('click', (e) => {
+    if (themeDeleteArmed && e.target.closest('#qs-theme-delete') === null) armThemeDelete(false);
+});
 
 function loadQuickForm() {
     const { settings } = surface.state;
@@ -159,6 +408,7 @@ async function openQuickSettings() {
 }
 
 function closeQuickSettings() {
+    if (themeEditorOpen()) closeThemeEditor();   // never leave a draft armed behind a hidden sheet
     el('quick-settings').hidden = true;
     el('quick-settings-btn').setAttribute('aria-expanded', 'false');
     document.body.style.minHeight = '';   // let the popup shrink back to the timer
@@ -168,7 +418,11 @@ function closeQuickSettings() {
 el('quick-settings-btn').addEventListener('click', () => {
     if (quickSettingsOpen()) closeQuickSettings(); else openQuickSettings();
 });
-el('qs-close').addEventListener('click', closeQuickSettings);
+
+// One level at a time: out of the editor first, out of the sheet second.
+el('qs-close').addEventListener('click', () => {
+    if (themeEditorOpen()) closeThemeEditor(); else closeQuickSettings();
+});
 
 // A duration change must not yank a running block; the service worker applies
 // new durations to the next one (SETTINGS_CHANGED), same as the full page.
@@ -275,7 +529,7 @@ document.addEventListener('keydown', (e) => {
     // no worse than the behaviour before the sheet existed.
     if (e.code === 'Escape' && quickSettingsOpen()) {
         e.preventDefault();
-        closeQuickSettings();
+        if (themeEditorOpen()) closeThemeEditor(); else closeQuickSettings();
         return;
     }
     if (e.target.tagName === 'INPUT' || quickSettingsOpen()) return;

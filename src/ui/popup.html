@@ -73,15 +73,16 @@
 
     <!-- ===== QUICK SETTINGS =====
          Deliberately a short list: the few things worth changing without
-         leaving the timer. Everything else — volume, presets, the custom theme
-         editor, clock style, export/import, and the chromeless pop-out window
-         — lives in the full page, one click away via the header's
-         open-in-new-tab button. -->
+         leaving the timer. Everything else — volume, presets, clock style,
+         export/import, and the chromeless pop-out window — lives in the full
+         page, one click away via the header's open-in-new-tab button. -->
     <div class="quick-settings" id="quick-settings" hidden>
         <div class="qs-head">
-            <span class="qs-title">Quick settings</span>
+            <span class="qs-title" id="qs-title">Quick settings</span>
             <!-- A house, not an ×: this does not dismiss anything, it takes you
-                 back to the timer, which is the popup's home. -->
+                 back to the timer, which is the popup's home. With the theme
+                 editor open it steps back one level instead, so a half-typed
+                 theme is not thrown away by the only obvious way out. -->
             <button class="icon-btn qs-home" id="qs-close" title="Back to the timer"
                     aria-label="Back to the timer">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -112,6 +113,54 @@
                         <option value="orbitron">Orbitron</option>
                     </select>
                 </div>
+            </section>
+
+            <!-- The custom-theme editor, back in the popup. Picking a theme
+                 without leaving the timer only helps if *making* one does too;
+                 the full page keeps its own copy for the wider layout.
+                 While this is open the sheet hides every other block
+                 (.quick-settings.editing), so the sheet stays one screen and
+                 the tint behind it previews the colours being typed. -->
+            <section class="qs-block qs-editor" id="qs-theme-editor" hidden>
+                <input type="text" class="qs-text" id="qs-theme-name" maxlength="20"
+                       placeholder="Theme name" autocomplete="off" spellcheck="false">
+
+                <!-- Three tabs that are also the preview swatches: one set of
+                     sliders edits whichever mode is selected, because three
+                     stacked colour editors do not fit 340px. -->
+                <div class="qs-mode-swatches" id="qs-mode-swatches" role="group"
+                     aria-label="Which mode to colour">
+                    <button class="qs-mode-swatch active" data-mode="pomodoro"
+                            type="button" aria-pressed="true"><i></i>Focus</button>
+                    <button class="qs-mode-swatch" data-mode="shortBreak"
+                            type="button" aria-pressed="false"><i></i>Short</button>
+                    <button class="qs-mode-swatch" data-mode="longBreak"
+                            type="button" aria-pressed="false"><i></i>Long</button>
+                </div>
+
+                <!-- No <input type="color">: it opens the OS colour panel, and a
+                     toolbar popup closes as soon as focus leaves it — the theme
+                     being made would go with it. Each track is painted with what
+                     it does, so the sliders need no labels. -->
+                <div class="qs-sliders">
+                    <input type="range" id="qs-hue" min="0" max="360" step="1" aria-label="Hue">
+                    <input type="range" id="qs-sat" min="0" max="100" step="1" aria-label="Saturation">
+                    <input type="range" id="qs-light" min="0" max="100" step="1" aria-label="Lightness">
+                </div>
+
+                <div class="qs-row">
+                    <span id="qs-hex-label">Hex</span>
+                    <input type="text" class="qs-hex" id="qs-hex" maxlength="7"
+                           spellcheck="false" autocomplete="off" aria-labelledby="qs-hex-label">
+                </div>
+
+                <div class="qs-editor-actions">
+                    <button class="qs-btn" id="qs-theme-cancel">Cancel</button>
+                    <button class="qs-btn primary" id="qs-theme-save">Save</button>
+                </div>
+                <!-- Two-step, like the reset below: confirm() can take a
+                     toolbar popup down with it. -->
+                <button class="qs-reset" id="qs-theme-delete" hidden>Delete theme</button>
             </section>
 
             <section class="qs-block">
