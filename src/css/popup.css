@@ -153,7 +153,15 @@ body.popup {
        must be exactly as wide as the popup, and the popup's own box is the
        only thing that reliably knows that. */
     position: absolute;
-    inset: 0;
+    /* Top, left and right pinned; bottom deliberately free, so the sheet's
+       height is its content's height and nothing inside it ever has to scroll.
+       fitSheet then hands that height to the popup. `inset: 0` used to stretch
+       the sheet to the timer view underneath instead, which is what made the
+       sheet a box too small for its own contents and gave .qs-body something to
+       scroll. min-height keeps it covering the whole popup when the content is
+       the shorter of the two (the theme editor). */
+    inset: 0 0 auto;
+    min-height: 100%;
     z-index: 10;
     display: flex;
     flex-direction: column;
@@ -161,10 +169,10 @@ body.popup {
     /* Pinned, because this sheet's height is measured (fitSheet) to size the
        popup, and body wears whatever --timer-font is set to. Under the default
        `normal`, a line box is as tall as the face's own ascent+descent — so the
-       same row is a point or two taller in Orbitron than in Inter, the sheet
-       measured in one face and rendered in another, and the leftover became the
-       scrollbar. A number instead of `normal` makes every line box a function
-       of font-size alone, which no font swap changes. */
+       same row is a point or two taller in Orbitron than in Inter, and the sheet
+       would be measured in one face and rendered in another. A number instead of
+       `normal` makes every line box a function of font-size alone, which no font
+       swap changes. */
     line-height: 1.25;
     /* Tinted with the current mode accent, not just neutral glass. Picking a
        theme from the grid above is otherwise invisible: the sheet covers the
@@ -218,48 +226,27 @@ body.popup {
     color: var(--accent);
 }
 
+/* No overflow of its own, on purpose. This used to be `overflow-y: auto` as a
+   safety valve, and the valve fed itself: the bar took 8px off the row width,
+   8px narrower turned the 7-column swatch grid into 6 columns, 6 columns added a
+   fifth row of chips, and the extra row kept the bar. It could not close once it
+   had opened. The sheet is sized to its content now (see .quick-settings), so
+   there is nothing to scroll and no bar to take up the width.
+
+   If the content ever does outgrow Chrome's 600px popup — enough custom themes
+   would do it — the document scrolls as a whole rather than a box inside it.
+   Worse, but it takes a lot of themes to get there, and it costs nothing until
+   it happens. */
 .qs-body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    flex: 1;
-    /* A safety valve, not the plan: fitSheet grows the popup to whatever this
-       measures, and every box in the sheet is sized off font-size rather than
-       the face, so the measurement holds. What is left for the valve is content
-       that will not fit at any height — enough custom themes to push the sheet
-       past the popup's 600px ceiling. Not a font swap, which is what used to
-       open it. */
-    overflow-y: auto;
-    /* And it should cost as little as possible when it does. On a Mac set to
-       "always show scroll bars" Chrome draws a classic 15px bar, and a classic
-       bar is furniture: the gutter comes out of the padding box, so the sheet
-       lost 15px of row width and the grey slab landed against the toggles.
-       This pair moves that cost out to the sheet's own right padding — the box
-       grows 8px into it, the padding gives the 8px back, so the rows sit exactly
-       where they always did while the valve is shut, and the bar is 8px inset
-       from the popup edge rather than on top of a control when it opens. */
-    margin-right: -8px;
-    padding-right: 8px;
-}
-
-/* Styled rather than hidden: the valve is rare, but a sheet that scrolls with no
-   sign of it is a sheet with controls you cannot find. Dim enough to read as
-   part of the chrome, and only drawn while there is something to scroll. */
-.qs-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.qs-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.qs-body::-webkit-scrollbar-thumb {
-    background: var(--border-light);
-    border-radius: 999px;
-}
-
-.qs-body::-webkit-scrollbar-thumb:hover {
-    background: var(--text-tertiary);
+    /* `auto` rather than `flex: 1`'s implied 0 basis: the sheet's height is its
+       content's height now, so this box has to contribute its content height to
+       that sum outright, not lean on a flex item's automatic minimum size to get
+       back up to it. Still grows to fill the room when min-height: 100% makes the
+       sheet the taller of the two. */
+    flex: 1 1 auto;
 }
 
 .qs-block {

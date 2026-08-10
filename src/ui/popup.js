@@ -364,34 +364,37 @@ function loadQuickForm() {
     renderThemeRow();
 }
 
-// The sheet is absolutely positioned over the timer view, so it adds no height
-// of its own and Chrome sizes the popup from the view underneath. Once the
-// sheet's content is the taller of the two, .qs-body's overflow scrolls a
-// control out of sight — which is how the notifications toggle disappeared when
-// the font and chime rows landed. Grow the popup to the content instead.
+// The sheet is absolutely positioned over the timer view, so it adds no height of
+// its own and Chrome sizes the popup from the view underneath. When the sheet is
+// the taller of the two, the popup has to be told.
 //
-// Measured rather than hardcoded: the sheet's height moves with the muted note,
-// and with whatever a font stack does to the row heights.
+// The sheet's own box is the measurement: it is pinned top/left/right with its
+// bottom free (see .quick-settings), so offsetHeight is simply how tall its
+// content is — nothing inside it scrolls, and nothing clips. Which is the whole
+// point: the earlier version measured how much .qs-body was *overflowing* by,
+// and an overflowing box has a scrollbar, and the scrollbar narrowed the swatch
+// grid enough to add a row, which kept it overflowing.
+//
+// Measured rather than hardcoded: the height moves with the muted note, the
+// theme count, and whatever a font stack does to the rows.
 //
 // Clamped, because Chrome caps a toolbar popup at 600px and scrolls the document
-// past that — which would carry the title and the reset button out of reach
-// instead of the row the .qs-body valve costs us.
+// past that. Asking for more than it can give just moves the scrollbar onto the
+// document.
 const POPUP_MAX_HEIGHT = 590;
 
 function fitSheet() {
-    document.body.style.minHeight = '';
-    const body = el('quick-settings').querySelector('.qs-body');
-    const overflow = body.scrollHeight - body.clientHeight;
-    if (overflow <= 0) return;
-    const wanted = document.body.offsetHeight + overflow;
+    document.body.style.minHeight = '';   // measure both boxes ungrown
+    const wanted = el('quick-settings').offsetHeight;
+    if (wanted <= document.body.offsetHeight) return;
     document.body.style.minHeight = `${Math.min(wanted, POPUP_MAX_HEIGHT)}px`;
 }
 
-// A face that has not been fetched yet lays out in the fallback, so measuring
-// now sizes the popup for a sheet it is about to stop being: the swap-in grows
-// every row a little and the valve engages on rows that were meant to fit. That
-// is the scrollbar that showed up on Orbitron and not on Inter. Fit twice —
-// once for the sheet on screen, once for the one the faces leave behind.
+// A face that has not been fetched yet lays out in the fallback, so measuring now
+// sizes the popup for a sheet it is about to stop being. The sheet's own boxes are
+// sized off font-size and no longer move when the file lands, but the timer view
+// underneath — which is what the sheet is measured against — still does. Fit
+// twice: once for the sheet on screen, once for the one the faces leave behind.
 function fitSheetWhenFacesLand() {
     fitSheet();
     document.fonts?.ready.then(() => {

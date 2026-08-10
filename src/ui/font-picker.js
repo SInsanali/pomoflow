@@ -85,11 +85,12 @@ export function showFontFaces(select) {
     select.before(picker);
     select.hidden = true;
 
-    // Both surfaces put this control inside a scroll box — the popup's .qs-body,
-    // the full page's .modal-body — and a list positioned inside one is clipped
-    // to whatever is left of that box, which was about five of the eight rows.
-    // Fixed lifts it out of the box so it can use the whole surface; the price
-    // is that nothing anchors it to the button any more, so we do that here.
+    // The full page puts this control inside a scroll box (.modal-body), and a
+    // list positioned inside one is clipped to whatever is left of that box,
+    // which was about five of the eight rows. Fixed lifts it out so it can use
+    // the whole surface; the price is that nothing anchors it to the button any
+    // more, so we do that here. (The popup's .qs-body no longer scrolls, but the
+    // popup is the shorter surface of the two and wants the room even more.)
     const GAP = 6;          // between the button and the list
     const EDGE = 10;        // between the list and the surface's own edges
     const MIN_HEIGHT = 120; // rather scroll than collapse to a sliver
