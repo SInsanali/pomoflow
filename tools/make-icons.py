@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Generate src/icons/{16,32,48,128}.png.
+"""Generate src/icons/{16,32,48,128}.png — the ORIGINAL generated mark.
 
-The icons are the only binary assets in the repo, so they are generated rather
-than committed blind — rerun this to change the mark or the colour.
+Superseded. src/icons/*.png are now authored artwork (a purple tile with a
+white clock face), committed as the source of truth because there is no vector
+original to render from. This script only still exists because it is the sole
+record of how the previous mark was built.
+
+It therefore refuses to run unless you pass --force, which would overwrite that
+artwork with the old orange disc. Nothing in the build calls it.
 
 The mark is a timer disc with a wedge cut out of it, drawn 4x oversampled and
 box-filtered down for antialiasing. No third-party imaging library: PNG is
@@ -11,6 +16,7 @@ simple enough to emit directly with zlib.
 
 import math
 import struct
+import sys
 import zlib
 from pathlib import Path
 
@@ -67,12 +73,21 @@ def png_bytes(size):
 
 
 def main():
+    # The icons in the tree are artwork, not output. Running this by habit —
+    # it used to be a documented step — would silently replace them with the
+    # old orange disc, and there is no vector master to restore them from.
+    if "--force" not in sys.argv:
+        print("superseded: src/icons/*.png are authored artwork, not output.", file=sys.stderr)
+        print("refusing to overwrite them; pass --force to restore the old orange disc.", file=sys.stderr)
+        return 1
+
     OUT.mkdir(parents=True, exist_ok=True)
     for size in SIZES:
         path = OUT / f"{size}.png"
         path.write_bytes(png_bytes(size))
         print(f"wrote {path} ({path.stat().st_size} bytes)")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,7 +1,10 @@
 # Personal focus history exported from v1 — never publish
 v1-data-export.json
 
-# Python (only tools/make-icons.py remains; the v1 server is gone)
+# Icon artwork drops — the four PNGs in src/icons are what ships
+*.zip
+
+# Python (only tools/make-icons.py remains, superseded; the v1 server is gone)
 __pycache__/
 *.py[cod]
 .venv/

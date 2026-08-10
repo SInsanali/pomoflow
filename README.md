@@ -137,13 +137,18 @@ node --test tests/*.mjs     # timer arithmetic, storage, migration, charts,
                             # themes, and the popup's sheet-fitting (behaviour
                             # only — tests/helpers/popup-dom.mjs computes no
                             # layout, so CSS still needs eyeballing in Chrome)
-python3 tools/make-icons.py # regenerate src/icons/*.png
 python3 -m http.server 8731 # then open /tools/icon-preview.html to proof the
                             # drawn minutes icon on light and dark toolbars
 ```
 
 There is no build step and no dependencies — the extension loads the source
 directly.
+
+`src/icons/*.png` are **artwork, not build output** — there is no vector master
+in the tree, so those four files are the source of truth. Replacing the icon
+means replacing them. `tools/make-icons.py` still holds the recipe for the
+original generated mark (an orange disc with a quarter cut out) but refuses to
+run without `--force`, so it cannot quietly overwrite the artwork.
 
 ## v1 (Python server)
 
