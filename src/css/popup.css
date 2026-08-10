@@ -310,7 +310,6 @@ body.popup {
     border-top: 1px solid var(--border-color);
 }
 
-.qs-text-btn,
 .qs-reset {
     width: 100%;
     padding: 9px;
@@ -322,11 +321,6 @@ body.popup {
     font-size: 0.78rem;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
-.qs-text-btn:hover {
-    background: var(--bg-glass-hover);
-    color: var(--text-primary);
 }
 
 .qs-reset {

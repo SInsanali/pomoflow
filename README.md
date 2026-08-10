@@ -23,8 +23,8 @@ the big clock, the dashboard, and every setting; the **gear** opens quick
 settings in place: recent themes, the three durations, auto-start, and
 notifications, with *Reset settings* at the bottom.
 
-The chromeless **pop-out** window — the one you park on a second monitor — is at
-the bottom of quick settings, and in the full page's own header.
+The chromeless **pop-out** window — the one you park on a second monitor — is in
+the full page's own header.
 
 The timer does not live in any of those windows. Close the popup, close every
 tab, quit Chrome entirely — the block keeps its deadline and resolves correctly
