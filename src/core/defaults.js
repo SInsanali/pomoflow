@@ -9,8 +9,12 @@ export const DEFAULT_SETTINGS = {
     autoStartPomodoros: false,
     volume: 0.5,
     sound: 'chime',
-    theme: 'mono',
-    recentThemes: ['mono', 'dusk', 'ocean', 'glacier'],
+    // dusk, not mono: a warm ember for focus against a cool blue for breaks
+    // reads as a mode change at a glance, and with colorBackground on it tints
+    // the whole surface. mono stays the *fallback* (themes.FALLBACK_THEME) —
+    // that one is about surviving a corrupt theme, not about looking good.
+    theme: 'dusk',
+    recentThemes: ['dusk', 'ocean', 'glacier', 'mono'],
     timerStyle: 'flip',
     timerFont: 'system',
     colorBackground: true,

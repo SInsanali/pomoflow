@@ -10,8 +10,12 @@
     <div class="popup-shell">
         <header class="popup-header">
             <span class="popup-mode" id="mode-label">Focus</span>
+            <!-- The arrow-out-of-a-box glyph now carries "open the full page",
+                 which is what it reads as. Popping out into a chromeless window
+                 is the rarer move and lives one level in, at the bottom of the
+                 quick settings (and in the full page's own header). -->
             <div class="popup-header-actions">
-                <button id="popout-btn" class="icon-btn" title="Open in its own window" aria-label="Pop out">
+                <button id="open-app-btn" class="icon-btn" title="Dashboard &amp; full settings" aria-label="Open full page">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round">
                         <path d="M15 3h6v6" />
@@ -19,11 +23,13 @@
                         <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
                     </svg>
                 </button>
-                <button id="open-app-btn" class="icon-btn" title="Dashboard &amp; settings" aria-label="Open full page">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+                <button id="quick-settings-btn" class="icon-btn" title="Quick settings" aria-label="Quick settings"
+                        aria-expanded="false" aria-controls="quick-settings">
+                    <!-- Same gear as the full page's settings button, so the two
+                         surfaces name the same idea with the same glyph. -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                     </svg>
                 </button>
             </div>
@@ -62,6 +68,82 @@
         <div class="popup-meta">
             <span id="session-counter">Study 1</span>
             <span id="goal-progress">0/4</span>
+        </div>
+    </div>
+
+    <!-- ===== QUICK SETTINGS =====
+         Deliberately a short list: the four things worth changing without
+         leaving the timer. Everything else — fonts, sounds, presets, custom
+         themes, export/import — lives in the full page, one click away via the
+         header's open-in-new-tab button. -->
+    <div class="quick-settings" id="quick-settings" hidden>
+        <div class="qs-head">
+            <span class="qs-title">Quick settings</span>
+            <button class="icon-btn" id="qs-close" title="Close" aria-label="Close quick settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="qs-body">
+            <section class="qs-block">
+                <span class="qs-label">Theme</span>
+                <div class="qs-themes" id="qs-themes"></div>
+            </section>
+
+            <section class="qs-block">
+                <span class="qs-label">Minutes</span>
+                <div class="qs-durations">
+                    <label>
+                        <input type="number" id="qs-pomodoro" min="1" max="60" step="1">
+                        <span>Focus</span>
+                    </label>
+                    <label>
+                        <input type="number" id="qs-short-break" min="1" max="30" step="1">
+                        <span>Short</span>
+                    </label>
+                    <label>
+                        <input type="number" id="qs-long-break" min="1" max="60" step="1">
+                        <span>Long</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="qs-block">
+                <div class="qs-row">
+                    <span>Auto-start breaks</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="qs-auto-breaks">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="qs-row">
+                    <span>Auto-start pomodoros</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="qs-auto-pomodoros">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="qs-row">
+                    <span>Desktop notifications</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="qs-notifications">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </section>
+        </div>
+
+        <div class="qs-foot">
+            <button class="qs-text-btn" id="qs-popout">Open in its own window</button>
+            <!-- Two-step rather than a confirm(): a modal dialog inside a
+                 toolbar popup can take the popup down with it. -->
+            <button class="qs-reset" id="qs-reset">Reset settings</button>
+            <p class="qs-note" id="qs-reset-note" hidden>
+                Restores defaults and deletes custom themes. History is kept.
+            </p>
         </div>
     </div>
 

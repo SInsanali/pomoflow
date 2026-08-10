@@ -65,7 +65,7 @@ export function padRecentThemes(recentThemes, customThemes = {}) {
     const next = (recentThemes || []).filter(
         id => isValidTheme(customThemes[id] || THEMES[id])
     );
-    for (const filler of ['mono', 'dusk', 'ocean', 'glacier']) {
+    for (const filler of ['dusk', 'ocean', 'glacier', 'mono']) {
         if (next.length >= 4) break;
         if (!next.includes(filler)) next.push(filler);
     }

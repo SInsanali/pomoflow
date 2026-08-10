@@ -18,9 +18,13 @@ Not on the Chrome Web Store yet, so load it unpacked:
 ## Using it
 
 Click the toolbar icon for the popup — mode tabs, the clock, start/reset/skip,
-and the four cycle dots. The **pop-out** button opens the timer in its own
-chromeless window you can park on a second monitor; the **gear** opens the full
-page with the big clock, the dashboard, and settings.
+and the four cycle dots. The **open-in-new-tab** button opens the full page with
+the big clock, the dashboard, and every setting; the **gear** opens quick
+settings in place: recent themes, the three durations, auto-start, and
+notifications, with *Reset settings* at the bottom.
+
+The chromeless **pop-out** window — the one you park on a second monitor — is at
+the bottom of quick settings, and in the full page's own header.
 
 The timer does not live in any of those windows. Close the popup, close every
 tab, quit Chrome entirely — the block keeps its deadline and resolves correctly
