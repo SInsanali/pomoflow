@@ -20,8 +20,9 @@ Not on the Chrome Web Store yet, so load it unpacked:
 Click the toolbar icon for the popup — mode tabs, the clock, start/reset/skip,
 and the four cycle dots. The **open-in-new-tab** button opens the full page with
 the big clock, the dashboard, and every setting; the **gear** opens quick
-settings in place: recent themes, the three durations, auto-start, and
-notifications, with *Reset settings* at the bottom.
+settings in place: recent themes, the timer font, the three durations, the
+chime (picking one plays it), auto-start, and notifications, with *Reset
+settings* at the bottom. Volume stays in the full page.
 
 The chromeless **pop-out** window — the one you park on a second monitor — is in
 the full page's own header.

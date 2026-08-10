@@ -98,7 +98,25 @@ function loadQuickForm() {
     el('qs-auto-breaks').checked = settings.autoStartBreaks;
     el('qs-auto-pomodoros').checked = settings.autoStartPomodoros;
     el('qs-notifications').checked = settings.notifications;
+    el('qs-font').value = settings.timerFont || DEFAULT_SETTINGS.timerFont;
+    el('qs-sound').value = settings.sound || DEFAULT_SETTINGS.sound;
+    el('qs-muted').hidden = settings.volume > 0;
     renderThemeRow();
+}
+
+// The sheet is absolutely positioned over the timer view, so it adds no height
+// of its own and Chrome sizes the popup from the view underneath. Once the
+// sheet's content is the taller of the two, .qs-body's overflow scrolls a
+// control out of sight — which is how the notifications toggle disappeared when
+// the font and chime rows landed. Grow the popup to the content instead.
+//
+// Measured rather than hardcoded: the sheet's height moves with the muted note,
+// and with whatever a font stack does to the row heights.
+function fitSheet() {
+    document.body.style.minHeight = '';
+    const body = el('quick-settings').querySelector('.qs-body');
+    const overflow = body.scrollHeight - body.clientHeight;
+    if (overflow > 0) document.body.style.minHeight = `${document.body.offsetHeight + overflow}px`;
 }
 
 async function openQuickSettings() {
@@ -106,11 +124,13 @@ async function openQuickSettings() {
     loadQuickForm();
     el('quick-settings').hidden = false;
     el('quick-settings-btn').setAttribute('aria-expanded', 'true');
+    fitSheet();
 }
 
 function closeQuickSettings() {
     el('quick-settings').hidden = true;
     el('quick-settings-btn').setAttribute('aria-expanded', 'false');
+    document.body.style.minHeight = '';   // let the popup shrink back to the timer
     armReset(false);
 }
 
@@ -138,6 +158,30 @@ for (const [id, [key, min, max]] of Object.entries(DURATIONS)) {
     });
 }
 
+// The font applies to the clock behind the sheet the moment it is patched:
+// surface.js writes --timer-font on every refresh, so the change previews
+// itself without any extra wiring here.
+el('qs-font').addEventListener('change', (e) =>
+    patchSettings({ timerFont: e.target.value }));
+
+// Picking a chime plays it, the way an OS alert-sound list does. Two clicks to
+// hear each option would make the picker useless in a popup — and the play
+// button is still there to repeat the current one.
+el('qs-sound').addEventListener('change', async (e) => {
+    await patchSettings({ sound: e.target.value });
+    previewChime();
+});
+el('qs-play').addEventListener('click', previewChime);
+
+// Audio comes from the service worker's offscreen document, not from here: a
+// popup is torn down the instant it loses focus, which would cut the sound off
+// partway through.
+function previewChime() {
+    const { settings } = surface.state;
+    if (!settings.volume) return;   // the muted note already explains the silence
+    send('TEST_SOUND', { sound: el('qs-sound').value, volume: settings.volume });
+}
+
 el('qs-auto-breaks').addEventListener('change', (e) =>
     patchSettings({ autoStartBreaks: e.target.checked }));
 el('qs-auto-pomodoros').addEventListener('change', (e) =>
@@ -157,6 +201,9 @@ function armReset(armed) {
     el('qs-reset').textContent = armed ? 'Tap again to confirm' : 'Reset settings';
     el('qs-reset').classList.toggle('armed', armed);
     el('qs-reset-note').hidden = !armed;
+    // The note grows the foot, which squeezes .qs-body — the same overflow the
+    // font and chime rows caused, arriving from the other end.
+    if (quickSettingsOpen()) fitSheet();
 }
 
 // Session history is deliberately spared. It is not a "setting", and losing it

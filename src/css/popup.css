@@ -339,3 +339,69 @@ body.popup {
     line-height: 1.45;
     color: var(--text-tertiary);
 }
+
+/* The full page's .theme-select, shrunk to popup scale. Same border, radius,
+   and glass fill as the duration fields above it, so the sheet reads as one
+   control set rather than two. */
+.qs-select {
+    /* No max-width: a <select> already sizes to its widest option, and capping
+       it clipped "Chime" once the play button shared the row. */
+    flex: none;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    background: var(--bg-glass);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.qs-select:focus {
+    outline: none;
+    border-color: var(--border-light);
+    background: var(--bg-glass-hover);
+}
+
+/* The popup inherits the page background, which on a light system theme would
+   otherwise render the dropdown list as light-on-light. */
+.qs-select option {
+    background: #1a1a1a;
+    color: var(--text-primary);
+}
+
+.qs-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.qs-play {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    background: var(--bg-glass);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.qs-play svg { width: 13px; height: 13px; }
+
+.qs-play:hover {
+    background: var(--bg-glass-hover);
+    border-color: var(--border-light);
+    color: var(--accent);
+}
+
+/* Sits under its row, not beside it — the row is already at its width budget. */
+.qs-muted {
+    margin: -2px 0 0;
+}

@@ -73,9 +73,10 @@
 
     <!-- ===== QUICK SETTINGS =====
          Deliberately a short list: the few things worth changing without
-         leaving the timer. Everything else — fonts, sounds, presets, custom
-         themes, export/import, and the chromeless pop-out window — lives in the
-         full page, one click away via the header's open-in-new-tab button. -->
+         leaving the timer. Everything else — volume, presets, custom themes,
+         clock style, export/import, and the chromeless pop-out window — lives
+         in the full page, one click away via the header's open-in-new-tab
+         button. -->
     <div class="quick-settings" id="quick-settings" hidden>
         <div class="qs-head">
             <span class="qs-title">Quick settings</span>
@@ -89,8 +90,24 @@
 
         <div class="qs-body">
             <section class="qs-block">
-                <span class="qs-label">Theme</span>
+                <span class="qs-label">Appearance</span>
                 <div class="qs-themes" id="qs-themes"></div>
+                <div class="qs-row">
+                    <span>Timer font</span>
+                    <!-- Same eight stacks as the full page (FONT_STACKS), in the
+                         same order, so the two surfaces never disagree about
+                         what "Orbitron" means. -->
+                    <select class="qs-select" id="qs-font">
+                        <option value="system">System</option>
+                        <option value="inter">Inter</option>
+                        <option value="poppins">Poppins</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="raleway">Raleway</option>
+                        <option value="jetbrains">JetBrains Mono</option>
+                        <option value="space">Space Mono</option>
+                        <option value="orbitron">Orbitron</option>
+                    </select>
+                </div>
             </section>
 
             <section class="qs-block">
@@ -112,6 +129,28 @@
             </section>
 
             <section class="qs-block">
+                <div class="qs-row">
+                    <span>Chime</span>
+                    <span class="qs-inline">
+                        <select class="qs-select" id="qs-sound">
+                            <option value="chime">Chime</option>
+                            <option value="digital">Digital</option>
+                            <option value="gong">Gong</option>
+                            <option value="melody">Melody</option>
+                        </select>
+                        <button class="qs-play" id="qs-play" title="Play" aria-label="Play the chime">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        </button>
+                    </span>
+                </div>
+                <!-- Picking a chime is pointless if it cannot be heard, and the
+                     volume slider stays in the full page — so say so rather
+                     than letting the preview fail silently. -->
+                <p class="qs-note qs-muted" id="qs-muted" hidden>
+                    Volume is at zero — raise it in full settings to hear this.
+                </p>
                 <div class="qs-row">
                     <span>Auto-start breaks</span>
                     <label class="toggle">
