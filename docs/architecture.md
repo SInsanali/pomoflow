@@ -69,20 +69,23 @@ When a block ends and the next one is not set to auto-start, the icon becomes a
 and the popup is closed by definition. Paused or merely idle, the static
 Pomoflow mark comes back.
 
-Its **colour says where in the cycle you are**. Breaks auto-start by default, so
-the only block that ever waits is a pomodoro and a flat mode accent made every
-`!` identical. A waiting pomodoro is instead drawn on a ramp
-(`themes.waitingAccent`) from the theme's pomodoro accent toward its long-break
-accent, one step per pomodoro already banked: Study 1 is the accent exactly, and
-each following one leans further into the long break's colour. Same source as
-the app's "Study *N*" counter, so the two never disagree.
+Its **colour names the block that just ended** — not the one queued behind it.
+Finish a short break and the `!` wears the short break's accent even though a
+pomodoro is what waits. The block that ended is what the mark is reporting, and
+it is the half you cannot read anywhere else: the queued block is already spelled
+out in the tooltip.
 
-Three constraints hold the ramp together, all asserted in `tests/themes.test.mjs`:
-it stops **short** of the long-break accent (a waiting Study 4 and a waiting long
-break are consecutive states and must not look alike), it never rotates a hue
-more than 60° off the focus accent (unclamped, cyberpunk's green-to-magenta mix
-went through red), and every intermediate step clears the same 4.5:1 the accents
-themselves do.
+The ended mode is carried on the timer (`clock.awaitingTimer` writes
+`endedMode`), because the timer is the only thing persisted across a
+service-worker restart and a repaint on wake has no other route back to it. It
+cannot be derived from the waiting timer either — a waiting pomodoro can follow
+either kind of break. A timer stored by an older version has no `endedMode`, so
+the paint falls back to the timer's own mode.
+
+That makes the `!` always one of the theme's three accents, never a colour
+between them, so the ≥15 ΔE separation `tests/themes.test.mjs` already asserts
+between a theme's three modes is what keeps a finished short break from looking
+like a finished long one.
 
 ## Sound
 

@@ -123,13 +123,22 @@ export function idleTimer(mode, settings) {
         remainingMs: planned * 1000,
         isRunning: false,
         awaitingStart: false,
+        endedMode: null,
     };
 }
 
 // Flag an idle block as waiting on the user — the toolbar turns into "!" and
 // stays there until they act. Set only by block completion; see badgeText.
-export function awaitingTimer(timer) {
-    return { ...timer, awaitingStart: true };
+//
+// `endedMode` is the mode of the block whose completion put us here, which is
+// NOT this timer's own mode: finishing a pomodoro leaves a break waiting. The
+// toolbar colours the "!" by it, so the mark says which block you just closed
+// out rather than which one is queued — the queued one is already named in the
+// tooltip. It has to be carried on the timer because that is the only thing
+// persisted across a service-worker restart; a repaint on wake has no other way
+// back to the block that ended.
+export function awaitingTimer(timer, endedMode = null) {
+    return { ...timer, awaitingStart: true, endedMode };
 }
 
 // Start (or resume) a block.

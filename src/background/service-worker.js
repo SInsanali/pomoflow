@@ -13,7 +13,7 @@ import {
     ATTENTION,
 } from '../core/clock.js';
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
-import { resolveTheme, waitingAccent } from '../core/themes.js';
+import { resolveTheme } from '../core/themes.js';
 import { store } from '../store/storage.js';
 import { timerIcon } from './icon.js';
 
@@ -82,17 +82,22 @@ async function paintAction(text, color) {
     }
 }
 
-async function renderAction(timer, settings, customThemes, cycle) {
+async function renderAction(timer, settings, customThemes) {
     const now = Date.now();
     const theme = resolveTheme(settings.theme, customThemes);
     const text = badgeText(timer, now);
-    // Running minutes are a status and stay the plain mode accent. The "!" is a
-    // notification about the block that is WAITING, so it also carries where in
-    // the cycle that block sits — see waitingAccent.
-    const color = text === ATTENTION
-        ? waitingAccent(theme, timer.mode, cycle)
-        : (theme[timer.mode] || theme.pomodoro);
-    await paintAction(text, color);
+    // Both cases are one accent lookup; the only question is WHOSE mode.
+    //
+    // Running minutes are a status, so they take the accent of the block that is
+    // running. The "!" instead names the block that just ENDED — finish a break
+    // and it goes the break's colour, not the queued pomodoro's. That block is
+    // the thing the mark is reporting, and it is the half the user cannot read
+    // anywhere else: the queued one is already spelled out in the tooltip.
+    //
+    // endedMode is absent on a timer awaiting for any other reason (and on one
+    // stored by a previous version), so fall back to the timer's own mode.
+    const mode = text === ATTENTION ? (timer.endedMode || timer.mode) : timer.mode;
+    await paintAction(text, theme[mode] || theme.pomodoro);
 
     const label = MODE_LABELS[timer.mode] || 'Pomoflow';
     let title;
@@ -124,13 +129,10 @@ async function commit(timer) {
     const db = store();
     await db.setTimer(timer);
     await scheduleAlarms(timer);
-    // The cycle is read AFTER the caller has advanced it, so a "!" is painted
-    // for the block that is actually waiting rather than the one that just
-    // ended — completeBlock and cmdSkip both setCycle before committing.
-    const [{ data: settings }, customThemes, cycle] = await Promise.all([
-        db.getSettings(), db.getCustomThemes(), db.getCycle(),
+    const [{ data: settings }, customThemes] = await Promise.all([
+        db.getSettings(), db.getCustomThemes(),
     ]);
-    await renderAction(timer, settings, customThemes, cycle);
+    await renderAction(timer, settings, customThemes);
     return timer;
 }
 
@@ -216,7 +218,7 @@ async function completeBlock(timer, completedRecord) {
     let next = idleTimer(nextMode, settings);
     next = shouldAutoStart(nextMode, settings)
         ? startTimer(next, Date.now(), crypto.randomUUID())
-        : awaitingTimer(next);
+        : awaitingTimer(next, timer.mode);
     await commit(next);
 
     if (timer.mode === 'pomodoro') {
@@ -240,10 +242,10 @@ async function tick() {
     if (result.action === 'complete') {
         return completeBlock(timer, result.completedBlock);
     }
-    const [{ data: settings }, customThemes, cycle] = await Promise.all([
-        db.getSettings(), db.getCustomThemes(), db.getCycle(),
+    const [{ data: settings }, customThemes] = await Promise.all([
+        db.getSettings(), db.getCustomThemes(),
     ]);
-    await renderAction(timer, settings, customThemes, cycle);
+    await renderAction(timer, settings, customThemes);
     return timer;
 }
 
