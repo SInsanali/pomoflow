@@ -118,7 +118,43 @@ export function createSurface({ stage, onState, updateTitle = false }) {
         applyStyle();
         paint();
         if (onState) onState(state);
+        acknowledge();
     }
+
+    // ===== acknowledging the end-of-block "!" =====
+    //
+    // A surface the user can see means they know a block finished, so the
+    // toolbar's "!" has done its job and the Pomoflow mark can come back. Only
+    // the alert is spent here; the block stays unstarted.
+    //
+    // visibilityState, not merely "a surface is open": the pop-out exists to be
+    // parked on a second monitor, and a window buried behind others must not
+    // swallow the one signal that a block ended. That is also why this re-runs
+    // on visibilitychange and focus — the pop-out raised an hour later
+    // acknowledges then, not when it was opened.
+    //
+    // No loop, despite acknowledge() -> apply() -> acknowledge(): the worker
+    // answers with `attention` already false, and `acking` guards the window in
+    // between.
+    let acking = false;
+
+    async function acknowledge() {
+        if (acking || !state || !state.timer.attention) return;
+        if (document.visibilityState !== 'visible') return;
+        acking = true;
+        try {
+            apply(await send('ACKNOWLEDGE'));
+        } catch (e) {
+            // An unreachable worker (mid-update, say) must not surface as a page
+            // error on something this incidental — the next focus tries again.
+            console.warn('Pomoflow: could not acknowledge the finished block', e);
+        } finally {
+            acking = false;
+        }
+    }
+
+    document.addEventListener('visibilitychange', acknowledge);
+    window.addEventListener('focus', acknowledge);
 
     async function refresh() {
         apply(await send('GET_STATE'));

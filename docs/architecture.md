@@ -65,9 +65,38 @@ second-by-second countdown, use the pop-out window.
 ### End-of-block `!`
 
 When a block ends and the next one is not set to auto-start, the icon becomes a
-**`!`** and stays there until you act. A desktop notification is easy to miss,
-and the popup is closed by definition. Paused or merely idle, the static
-Pomoflow mark comes back.
+**`!`**. A desktop notification is easy to miss, and the popup is closed by
+definition, so the toolbar carries the news.
+
+It is an **alert, not a status**: it lasts until it has been seen, then the
+static Pomoflow mark comes back — the same thing the toolbar shows for any other
+block that is not running. Opening the popup, the full page, or a pop-out is what
+counts as seeing it, as is clicking the desktop notification. The gate is
+`document.visibilityState`, not merely "a surface is open", because the pop-out
+is built to be parked on a second monitor and a buried window must not swallow
+the one signal that a block ended.
+
+That is two facts with two different lifetimes, so the timer stores two flags:
+
+- **`awaitingStart`** — this block was queued by a completion and has not been
+  started. Survives acknowledgment, and is what the tooltip reads, so a
+  dismissed `!` still leaves *"Study 2 — ready to start"* on hover.
+- **`attention`** — the completion has not been seen yet. The **only** thing that
+  draws the `!`.
+
+Collapsing them into one flag forces a choice between a `!` that outlives being
+seen and a tooltip that calls an unstarted block "paused". Starting, resetting,
+skipping or switching mode clears both, as before.
+
+The toolbar's whole vocabulary is therefore three signs, and deliberately no
+more: **digits** = running, **`!`** = needs you, **the mark** = at rest. Drawing
+the next block's minutes while it waits was the tempting fourth, and it is the
+one thing that cannot be added — it is indistinguishable from a *running* block,
+which would stop the icon answering the only question it exists to answer.
+
+All block-end notifications share one id (`pomoflow-block-end`), so a completion
+replaces the last notice instead of stacking another entry in the notification
+centre, and one acknowledgment clears both channels.
 
 ## Sound
 
