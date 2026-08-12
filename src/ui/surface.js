@@ -16,7 +16,7 @@ export function send(type, extra = {}) {
     return chrome.runtime.sendMessage({ type, ...extra });
 }
 
-export function createSurface({ stage, onState, updateTitle = false, alwaysSeen = false }) {
+export function createSurface({ stage, onState, updateTitle = false }) {
     // The popup is capped around 800x600 and deliberately omits the flip clock,
     // so a surface builds only the renderers whose markup it actually has and
     // falls back to minimal for any style it cannot show.
@@ -118,58 +118,7 @@ export function createSurface({ stage, onState, updateTitle = false, alwaysSeen 
         applyStyle();
         paint();
         if (onState) onState(state);
-        acknowledge();
     }
-
-    // ===== acknowledging the end-of-block "!" =====
-    //
-    // A surface the user can see means they know a block finished, so the
-    // toolbar's "!" has done its job and the Pomoflow mark can come back. Only
-    // the alert is spent here; the block stays unstarted.
-    //
-    // WHICH surfaces can be open without being seen is the whole subtlety here,
-    // and the first version got it backwards.
-    //
-    // The popup passes alwaysSeen, because it exists only as a direct result of
-    // clicking the toolbar icon and Chrome destroys it the moment focus moves.
-    // It cannot be open-but-unseen, so there is nothing to gate — and gating it
-    // anyway is what made the first version fail to dismiss on the very click
-    // that opened it, since a popup document does not reliably report
-    // visibilityState 'visible' by the time the first state lands.
-    //
-    // The full page and the pop-out are the ones that genuinely can be buried —
-    // the pop-out is *built* to be parked on a second monitor — so they stay
-    // gated, and re-check on visibilitychange and focus so the window raised an
-    // hour later acknowledges then rather than when it was opened. Written as
-    // "not hidden" so an absent or unexpected value errs towards dismissing
-    // rather than towards nagging.
-    //
-    // No loop, despite acknowledge() -> apply() -> acknowledge(): the worker
-    // answers with `attention` already false, and `acking` guards the window in
-    // between.
-    let acking = false;
-
-    function seen() {
-        return alwaysSeen || document.visibilityState !== 'hidden';
-    }
-
-    async function acknowledge() {
-        if (acking || !state || !state.timer.attention) return;
-        if (!seen()) return;
-        acking = true;
-        try {
-            apply(await send('ACKNOWLEDGE'));
-        } catch (e) {
-            // An unreachable worker (mid-update, say) must not surface as a page
-            // error on something this incidental — the next focus tries again.
-            console.warn('Pomoflow: could not acknowledge the finished block', e);
-        } finally {
-            acking = false;
-        }
-    }
-
-    document.addEventListener('visibilitychange', acknowledge);
-    window.addEventListener('focus', acknowledge);
 
     async function refresh() {
         apply(await send('GET_STATE'));

@@ -15,10 +15,6 @@ const db = store();
 
 const surface = createSurface({
     stage: el('timer-stage'),
-    // Opening this popup IS the acknowledgment of an end-of-block "!": it only
-    // exists because the toolbar icon was clicked, and it dies the moment focus
-    // moves. Nothing to infer, so nothing is gated on visibility.
-    alwaysSeen: true,
     onState(state) {
         const { timer, cycle } = state;
 

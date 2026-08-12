@@ -28,11 +28,9 @@ second monitor.
 
 While a block runs, the toolbar icon is the whole minutes remaining, drawn in
 the current mode's accent colour; the tooltip shows `MM:SS`. When a block ends
-and the next one is *not* set to auto-start, the icon turns into a **`!`** — a
-desktop notification is easy to miss, and the popup is closed by definition. It
-behaves like a notification: opening Pomoflow (or clicking the notification)
-dismisses it and the icon goes back to the Pomoflow mark, while the tooltip still
-says the next block is ready to start.
+and the next one is *not* set to auto-start, the icon turns into a **`!`** and
+stays there until you act — a desktop notification is easy to miss, and the
+popup is closed by definition.
 
 Global hotkeys, rebindable at `chrome://extensions/shortcuts`:
 

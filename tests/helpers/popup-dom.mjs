@@ -157,10 +157,6 @@ export function installDom({ ids = [] } = {}) {
         body: doc,
         title: '',
         activeElement: null,
-        // A real document always has one, and surface.js gates the end-of-block
-        // acknowledgment on it. Tests flip it to 'hidden' to stand in for a
-        // pop-out parked behind other windows.
-        visibilityState: 'visible',
         fonts: new Fonts(),
         createElement: (tag) => new El(tag),
         getElementById: (id) => {
@@ -176,23 +172,15 @@ export function installDom({ ids = [] } = {}) {
         querySelector: (sel) => doc.querySelector(sel),
         querySelectorAll: (sel) => doc.querySelectorAll(sel),
         addEventListener: (t, fn) => doc.addEventListener(t, fn),
-        removeEventListener: (t, fn) => doc.removeEventListener(t, fn),
-        dispatchEvent: (event) => doc.dispatchEvent(event),
     };
 
     for (const id of ids) document.getElementById(id);
 
     globalThis.document = document;
-    // window carries real listener plumbing rather than a no-op, because a
-    // surface acknowledges the end-of-block "!" on regaining focus and that has
-    // to be replayable.
-    const windowEl = new El('window');
     globalThis.window = {
         innerHeight: 600,
         innerWidth: 340,
-        addEventListener: (t, fn) => windowEl.addEventListener(t, fn),
-        removeEventListener: (t, fn) => windowEl.removeEventListener(t, fn),
-        dispatchEvent: (event) => windowEl.dispatchEvent(event),
+        addEventListener: () => {},
         close: () => {},
         getComputedStyle: () => ({ getPropertyValue: () => '' }),
     };
