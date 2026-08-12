@@ -16,7 +16,7 @@ export function send(type, extra = {}) {
     return chrome.runtime.sendMessage({ type, ...extra });
 }
 
-export function createSurface({ stage, onState, updateTitle = false }) {
+export function createSurface({ stage, onState, updateTitle = false, alwaysSeen = false }) {
     // The popup is capped around 800x600 and deliberately omits the flip clock,
     // so a surface builds only the renderers whose markup it actually has and
     // falls back to minimal for any style it cannot show.
@@ -127,20 +127,35 @@ export function createSurface({ stage, onState, updateTitle = false }) {
     // toolbar's "!" has done its job and the Pomoflow mark can come back. Only
     // the alert is spent here; the block stays unstarted.
     //
-    // visibilityState, not merely "a surface is open": the pop-out exists to be
-    // parked on a second monitor, and a window buried behind others must not
-    // swallow the one signal that a block ended. That is also why this re-runs
-    // on visibilitychange and focus — the pop-out raised an hour later
-    // acknowledges then, not when it was opened.
+    // WHICH surfaces can be open without being seen is the whole subtlety here,
+    // and the first version got it backwards.
+    //
+    // The popup passes alwaysSeen, because it exists only as a direct result of
+    // clicking the toolbar icon and Chrome destroys it the moment focus moves.
+    // It cannot be open-but-unseen, so there is nothing to gate — and gating it
+    // anyway is what made the first version fail to dismiss on the very click
+    // that opened it, since a popup document does not reliably report
+    // visibilityState 'visible' by the time the first state lands.
+    //
+    // The full page and the pop-out are the ones that genuinely can be buried —
+    // the pop-out is *built* to be parked on a second monitor — so they stay
+    // gated, and re-check on visibilitychange and focus so the window raised an
+    // hour later acknowledges then rather than when it was opened. Written as
+    // "not hidden" so an absent or unexpected value errs towards dismissing
+    // rather than towards nagging.
     //
     // No loop, despite acknowledge() -> apply() -> acknowledge(): the worker
     // answers with `attention` already false, and `acking` guards the window in
     // between.
     let acking = false;
 
+    function seen() {
+        return alwaysSeen || document.visibilityState !== 'hidden';
+    }
+
     async function acknowledge() {
         if (acking || !state || !state.timer.attention) return;
-        if (document.visibilityState !== 'visible') return;
+        if (!seen()) return;
         acking = true;
         try {
             apply(await send('ACKNOWLEDGE'));

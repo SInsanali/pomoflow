@@ -71,10 +71,22 @@ definition, so the toolbar carries the news.
 It is an **alert, not a status**: it lasts until it has been seen, then the
 static Pomoflow mark comes back — the same thing the toolbar shows for any other
 block that is not running. Opening the popup, the full page, or a pop-out is what
-counts as seeing it, as is clicking the desktop notification. The gate is
-`document.visibilityState`, not merely "a surface is open", because the pop-out
-is built to be parked on a second monitor and a buried window must not swallow
-the one signal that a block ended.
+counts as seeing it, as is clicking the desktop notification.
+
+Which surfaces can be open *without* being seen is the subtlety, and it is not
+uniform:
+
+- The **popup** is never gated. It exists only as a direct result of clicking the
+  toolbar icon and Chrome destroys it the moment focus moves, so it cannot be
+  open-but-unseen. Gating it on `document.visibilityState` anyway is a live trap:
+  a popup document does not reliably report `'visible'` by the time the first
+  state lands, so the icon click — the most obvious acknowledgment there is —
+  silently failed to dismiss anything.
+- The **full page** and the **pop-out** are gated, because they genuinely can be
+  buried; the pop-out is *built* to be parked on a second monitor. They re-check
+  on `visibilitychange` and `focus`, so a window raised an hour later
+  acknowledges then. The test is "not `hidden`", so an unexpected value errs
+  towards dismissing rather than towards nagging.
 
 That is two facts with two different lifetimes, so the timer stores two flags:
 

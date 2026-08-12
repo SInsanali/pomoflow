@@ -39,7 +39,7 @@ function awaitingState() {
 
 let bootCount = 0;
 
-async function boot({ visibility = 'visible' } = {}) {
+async function boot({ visibility = 'visible', alwaysSeen = false } = {}) {
     const { document } = installDom({ ids: [] });
     document.visibilityState = visibility;
 
@@ -70,7 +70,7 @@ async function boot({ visibility = 'visible' } = {}) {
     // Cache-busted: each boot needs its own module instance, since createSurface
     // registers document- and window-level listeners.
     const { createSurface } = await import(`${SURFACE}?ack=${bootCount++}`);
-    const surface = createSurface({ stage });
+    const surface = createSurface({ stage, alwaysSeen });
 
     return { document, surface, sent, get state() { return state; } };
 }
@@ -87,6 +87,29 @@ test('a visible surface acknowledges the block it is showing', async () => {
     assert.deepEqual(sent, ['GET_STATE', 'ACKNOWLEDGE']);
     assert.equal(surface.state.timer.attention, false, 'the "!" is spent');
     assert.equal(surface.state.timer.awaitingStart, true, 'the block is still queued');
+});
+
+test('the popup acknowledges whatever its document claims about visibility', async () => {
+    // THE REGRESSION. The popup only exists because the toolbar icon was
+    // clicked, but its document does not reliably report 'visible' by the time
+    // the first state lands — so gating it on visibilityState meant clicking the
+    // icon did not dismiss the "!", which is the entire feature.
+    for (const visibility of ['hidden', 'prerender', undefined]) {
+        const { surface, sent } = await boot({ visibility, alwaysSeen: true });
+        surface.start();
+        await settle();
+        assert.ok(sent.includes('ACKNOWLEDGE'), `dismissed with visibilityState=${visibility}`);
+        assert.equal(surface.state.timer.attention, false);
+    }
+});
+
+test('an unexpected visibilityState errs towards dismissing, not nagging', async () => {
+    // A gated surface too: only a document that says it is *hidden* is treated
+    // as unseen. Anything else means the alert has done its job.
+    const { surface, sent } = await boot({ visibility: undefined });
+    surface.start();
+    await settle();
+    assert.ok(sent.includes('ACKNOWLEDGE'));
 });
 
 test('a hidden surface leaves the "!" alone', async () => {
