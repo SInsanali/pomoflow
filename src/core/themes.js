@@ -1,3 +1,5 @@
+import { POMODOROS_PER_CYCLE } from './defaults.js';
+
 // The built-in themes. Every theme is just three accents; app.css is entirely
 // CSS-variable driven (--pomodoro-accent / --short-break-accent /
 // --long-break-accent), so themes and mode-accent switching work here exactly
@@ -101,17 +103,96 @@ export function hexToHsl(hex) {
 }
 
 export function hslToHex({ h, s, l }) {
+    // Wrapped ONCE, up front, and used for both terms below. The sector lookup
+    // used to normalise on its own while `x` was computed from the raw hue,
+    // which is fine for a slider (0..360) but not for the ramp in mixHex, whose
+    // arithmetic runs off either end of the circle: a hue of -60 gave x = -c and
+    // a channel that formatted as "-ff".
+    const hue = (((h % 360) + 360) % 360);
     const sat = s / 100;
     const light = l / 100;
     const c = (1 - Math.abs(2 * light - 1)) * sat;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
     const m = light - c / 2;
     const [r, g, b] = [
         [c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x],
-    ][Math.floor((((h % 360) + 360) % 360) / 60)];
+    ][Math.floor(hue / 60)];
     return '#' + [r, g, b]
         .map(v => Math.round((v + m) * 255).toString(16).padStart(2, '0'))
         .join('');
+}
+
+// Blend two accents, `t` of the way from a to b.
+//
+// Mixed in HSL rather than RGB because an RGB midpoint between two accents on
+// opposite sides of the wheel goes through grey — cyberpunk's green and magenta
+// would meet at a washed-out white, which is not a colour that theme contains.
+// Rotating the hue instead keeps every step recognisably part of the palette.
+export function mixHex(a, b, t) {
+    if (!(t > 0)) return a.toLowerCase();
+    if (t >= 1) return b.toLowerCase();
+    const from = hexToHsl(a);
+    const to = hexToHsl(b);
+    // A grey has no hue to rotate away from, so it borrows the other end's
+    // instead of dragging the mix through red on its way out of h = 0.
+    const fromH = from.s ? from.h : to.h;
+    const toH = to.s ? to.h : fromH;
+    // Hue is a circle: take the short way round.
+    const turn = ((toH - fromH + 540) % 360) - 180;
+    return hslToHex({
+        h: fromH + turn * t,
+        s: from.s + (to.s - from.s) * t,
+        l: from.l + (to.l - from.l) * t,
+    });
+}
+
+// How far the ramp below may rotate a hue away from the accent it started on.
+//
+// Without a limit the mix takes the short way round the wheel however long that
+// is, and cyberpunk — neon green focus, magenta long break, 190° apart — walks
+// through yellow, orange and stops at red: three hues that theme does not
+// contain, on a mark whose whole job is "your focus block is waiting". Clamping
+// the rotation keeps every step recognisably the focus colour and lets the rest
+// of the travel come from saturation and lightness.
+const MAX_HUE_TURN = 60;
+
+// `to` with its hue pulled in to within MAX_HUE_TURN of `from`'s. Greys are
+// returned untouched: they have no hue to be far away in.
+function hueLimited(from, to) {
+    const a = hexToHsl(from);
+    const b = hexToHsl(to);
+    if (!a.s || !b.s) return to;
+    const turn = ((b.h - a.h + 540) % 360) - 180;
+    if (Math.abs(turn) <= MAX_HUE_TURN) return to;
+    return hslToHex({ ...b, h: a.h + Math.sign(turn) * MAX_HUE_TURN });
+}
+
+// The colour of the "!" — the mark a finished block leaves on the toolbar while
+// the next one waits on a decision.
+//
+// It used to be a flat theme[mode], which in practice meant ONE colour forever:
+// breaks auto-start by default, so the only block that ever waits is a
+// pomodoro, and every "!" came out the same accent. It said "something is
+// waiting" but never which something.
+//
+// A waiting pomodoro is now drawn on a ramp from the theme's pomodoro accent
+// toward its long-break accent, one step per pomodoro already banked in this
+// cycle. Study 1 is the pomodoro accent exactly; each following one leans
+// further into the long break's colour, so the toolbar answers "how much of the
+// cycle is left" without carrying a number it has no room for. It also matches
+// the "Study N" counter the app shows, because both read pomodorosInCycle.
+//
+// Steps are i/N and not i/(N-1) on purpose: the last pomodoro must stop SHORT
+// of the long-break accent, or a waiting Study 4 and a waiting long break —
+// consecutive states — would be painted the same colour.
+//
+// Breaks keep their own accent untouched. They only ever wait when
+// autoStartBreaks is off, and a break is already the thing the ramp points at.
+export function waitingAccent(theme, mode, cycle) {
+    const accent = theme[mode] || theme.pomodoro;
+    if (mode !== 'pomodoro') return accent;
+    const banked = Math.min(Math.max(cycle?.pomodorosInCycle || 0, 0), POMODOROS_PER_CYCLE - 1);
+    return mixHex(accent, hueLimited(accent, theme.longBreak), banked / POMODOROS_PER_CYCLE);
 }
 
 export function isValidTheme(theme) {

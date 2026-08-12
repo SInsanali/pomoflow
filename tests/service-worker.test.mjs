@@ -10,7 +10,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 // Read the accents rather than repeating them: what these tests care about is
 // that the icon follows the theme, not what shade of violet nebula is this year.
-import { THEMES } from "../src/core/themes.js";
+import { THEMES, waitingAccent } from "../src/core/themes.js";
+import { POMODOROS_PER_CYCLE } from "../src/core/defaults.js";
 
 const T0 = 1_760_000_000_000;
 
@@ -236,6 +237,45 @@ test("a finished break marks the toolbar, because the next block waits on you", 
     await sendMessage(listeners, { type: "START" });
     assert.equal(storage.timer.awaitingStart, false);
     assert.equal(calls.icon.at(-1).text, "25");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("the waiting mark is coloured by where the cycle is", async () => {
+  // The "!" only ever appears before a pomodoro (breaks auto-start), so a flat
+  // mode accent made every one of them the same colour. It now walks the ramp,
+  // and the colour has to be picked up from the CYCLE AS ADVANCED — the count
+  // is bumped during completion, one step before the toolbar is painted.
+  const { listeners, calls, storage } = await freshWorker();
+  const theme = THEMES.nebula;
+
+  const realNow = Date.now;
+  try {
+    const seen = [];
+    for (let round = 0; round < POMODOROS_PER_CYCLE; round++) {
+      // A pomodoro, then the break that starts itself; the "!" lands when the
+      // break ends and the next pomodoro is left waiting.
+      for (const _ of [0, 1]) {
+        await sendMessage(listeners, { type: "START" });
+        const deadline = storage.timer.endsAt;
+        Date.now = () => deadline + 1_000;
+        await listeners.alarm({ name: "block-end" });
+      }
+      assert.equal(calls.icon.at(-1).text, "!", `round ${round + 1} should be waiting`);
+      seen.push(calls.icon.at(-1).color);
+      assert.equal(
+        calls.icon.at(-1).color,
+        waitingAccent(theme, "pomodoro", storage.cycle),
+        `round ${round + 1} is drawn for the cycle it is actually on`,
+      );
+    }
+
+    assert.equal(new Set(seen).size, POMODOROS_PER_CYCLE, `four distinct colours, got ${seen}`);
+    // The fourth pomodoro of a cycle ends in a long break, which resets the
+    // count — so the mark comes back round to the plain focus accent.
+    assert.equal(seen.at(-1), theme.pomodoro, "a fresh cycle starts over on the accent");
+    assert.notEqual(seen[0], theme.pomodoro, "study 2 has already drifted");
   } finally {
     Date.now = realNow;
   }

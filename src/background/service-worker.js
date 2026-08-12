@@ -10,9 +10,10 @@ import {
     reconcile, remaining, badgeText, formatTime, remainingSeconds,
     idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
     advanceCycle, shouldAutoStart, sessionRecord, blockInProgress, elapsedSeconds,
+    ATTENTION,
 } from '../core/clock.js';
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
-import { resolveTheme } from '../core/themes.js';
+import { resolveTheme, waitingAccent } from '../core/themes.js';
 import { store } from '../store/storage.js';
 import { timerIcon } from './icon.js';
 
@@ -81,10 +82,17 @@ async function paintAction(text, color) {
     }
 }
 
-async function renderAction(timer, settings, customThemes) {
+async function renderAction(timer, settings, customThemes, cycle) {
     const now = Date.now();
     const theme = resolveTheme(settings.theme, customThemes);
-    await paintAction(badgeText(timer, now), theme[timer.mode] || theme.pomodoro);
+    const text = badgeText(timer, now);
+    // Running minutes are a status and stay the plain mode accent. The "!" is a
+    // notification about the block that is WAITING, so it also carries where in
+    // the cycle that block sits — see waitingAccent.
+    const color = text === ATTENTION
+        ? waitingAccent(theme, timer.mode, cycle)
+        : (theme[timer.mode] || theme.pomodoro);
+    await paintAction(text, color);
 
     const label = MODE_LABELS[timer.mode] || 'Pomoflow';
     let title;
@@ -116,10 +124,13 @@ async function commit(timer) {
     const db = store();
     await db.setTimer(timer);
     await scheduleAlarms(timer);
-    const [{ data: settings }, customThemes] = await Promise.all([
-        db.getSettings(), db.getCustomThemes(),
+    // The cycle is read AFTER the caller has advanced it, so a "!" is painted
+    // for the block that is actually waiting rather than the one that just
+    // ended — completeBlock and cmdSkip both setCycle before committing.
+    const [{ data: settings }, customThemes, cycle] = await Promise.all([
+        db.getSettings(), db.getCustomThemes(), db.getCycle(),
     ]);
-    await renderAction(timer, settings, customThemes);
+    await renderAction(timer, settings, customThemes, cycle);
     return timer;
 }
 
@@ -229,10 +240,10 @@ async function tick() {
     if (result.action === 'complete') {
         return completeBlock(timer, result.completedBlock);
     }
-    const [{ data: settings }, customThemes] = await Promise.all([
-        db.getSettings(), db.getCustomThemes(),
+    const [{ data: settings }, customThemes, cycle] = await Promise.all([
+        db.getSettings(), db.getCustomThemes(), db.getCycle(),
     ]);
-    await renderAction(timer, settings, customThemes);
+    await renderAction(timer, settings, customThemes, cycle);
     return timer;
 }
 

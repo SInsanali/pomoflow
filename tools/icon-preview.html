@@ -25,6 +25,9 @@
   .toolbar { display: flex; align-items: center; gap: 2px; padding: 14px 20px 18px; }
   .action { width: 16px; height: 16px; padding: 6px; box-sizing: content-box; display: block; }
   .disc { border-radius: 50%; }
+  /* One row per theme: the "!" as it walks the cycle, at toolbar size. */
+  .ramp { display: grid; grid-template-columns: 84px auto; align-items: center; gap: 2px 10px; padding: 8px 20px 18px; }
+  .ramp b { font: 500 11px system-ui; opacity: .7; }
 </style>
 <div class="dark">
   <h3>actual size, beside a neighbour icon</h3>
@@ -33,6 +36,14 @@
 <div class="light">
   <h3>actual size, beside a neighbour icon</h3>
   <div class="toolbar" id="mock-light"></div>
+</div>
+<div class="dark">
+  <h3>the waiting "!" across one cycle — study 1 → 4</h3>
+  <div class="ramp" id="ramp-dark"></div>
+</div>
+<div class="light">
+  <h3>the waiting "!" across one cycle — study 1 → 4</h3>
+  <div class="ramp" id="ramp-light"></div>
 </div>
 <div class="light">
   <h3>light toolbar</h3>
@@ -44,6 +55,21 @@
 </div>
 <script type="module">
   import { timerIcon } from '../src/background/icon.js';
+  import { THEMES, waitingAccent } from '../src/core/themes.js';
+  import { POMODOROS_PER_CYCLE } from '../src/core/defaults.js';
+
+  // A 16px icon drawn from the 32px bitmap, the way Chrome does it on a 2x
+  // display. Shared by the toolbar mock and the ramp rows below.
+  function action(text, color) {
+    const src = new OffscreenCanvas(32, 32);
+    src.getContext('2d').putImageData(timerIcon(text, color)[32], 0, 0);
+    const out = document.createElement('canvas');
+    out.width = out.height = 32;
+    out.style.width = out.style.height = '16px';
+    out.getContext('2d').drawImage(src, 0, 0);
+    out.className = 'action';
+    return out;
+  }
 
   // ===== actual-size mock =====
   //
@@ -54,17 +80,7 @@
   // (from the 32px bitmap on a 2x display).
   function mock(parent, cases) {
     const row = document.getElementById(parent);
-    for (const [text, color] of cases) {
-      const src = new OffscreenCanvas(32, 32);
-      src.getContext('2d').putImageData(timerIcon(text, color)[32], 0, 0);
-
-      const out = document.createElement('canvas');
-      out.width = out.height = 32;
-      out.style.width = out.style.height = '16px';
-      out.getContext('2d').drawImage(src, 0, 0);
-      out.className = 'action';
-      row.append(out);
-    }
+    for (const [text, color] of cases) row.append(action(text, color));
     // Two filled discs stand in for the neighbours — same visual weight as the
     // real ones, and the point of comparison is size, not artwork.
     for (const fill of ['#d93025', '#1a73e8']) {
@@ -85,6 +101,32 @@
   // Sam's report came from the dusk short break, blue on a dark toolbar.
   mock('mock-dark', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['!', '#e86a2c']]);
   mock('mock-light', [['16', '#4a90d9'], ['25', '#e86a2c'], ['5', '#e86a2c'], ['!', '#e86a2c']]);
+
+  // ===== the waiting ramp =====
+  //
+  // The "!" is coloured by how far into the cycle the waiting pomodoro sits, so
+  // the question this row answers is whether four steps of one theme's ramp are
+  // actually four colours at 16px — and whether the pale ones survive a light
+  // toolbar, which is the standing weakness of a flat, outline-free glyph.
+  //
+  // nebula is the default; coffee has the closest accents in the set and is the
+  // subtlest ramp there is; cyberpunk has the widest hue gap, i.e. the one the
+  // 60° clamp exists for; mono is the pale grey worst case on white.
+  for (const parent of ['ramp-dark', 'ramp-light']) {
+    const grid = document.getElementById(parent);
+    for (const id of ['nebula', 'coffee', 'cyberpunk', 'mono']) {
+      const row = document.createElement('div');
+      row.className = 'toolbar';
+      row.style.padding = '0';
+      for (let banked = 0; banked < POMODOROS_PER_CYCLE; banked++) {
+        row.append(action('!', waitingAccent(THEMES[id], 'pomodoro', { pomodorosInCycle: banked })));
+      }
+      // The long break the ramp is aiming at, for the gap that has to stay
+      // visible between the last pomodoro and the block after it.
+      row.append(action('!', THEMES[id].longBreak));
+      grid.append(Object.assign(document.createElement('b'), { textContent: id }), row);
+    }
+  }
 
   for (const parent of ['light', 'dark']) {
     for (const [text, color] of cases) {

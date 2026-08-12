@@ -69,6 +69,21 @@ When a block ends and the next one is not set to auto-start, the icon becomes a
 and the popup is closed by definition. Paused or merely idle, the static
 Pomoflow mark comes back.
 
+Its **colour says where in the cycle you are**. Breaks auto-start by default, so
+the only block that ever waits is a pomodoro and a flat mode accent made every
+`!` identical. A waiting pomodoro is instead drawn on a ramp
+(`themes.waitingAccent`) from the theme's pomodoro accent toward its long-break
+accent, one step per pomodoro already banked: Study 1 is the accent exactly, and
+each following one leans further into the long break's colour. Same source as
+the app's "Study *N*" counter, so the two never disagree.
+
+Three constraints hold the ramp together, all asserted in `tests/themes.test.mjs`:
+it stops **short** of the long-break accent (a waiting Study 4 and a waiting long
+break are consecutive states and must not look alike), it never rotates a hue
+more than 60° off the focus accent (unclamped, cyberpunk's green-to-magenta mix
+went through red), and every intermediate step clears the same 4.5:1 the accents
+themselves do.
+
 ## Sound
 
 End-of-block audio plays from an **offscreen document**, since service workers
