@@ -10,6 +10,7 @@ import {
     reconcile, remaining, badgeText, formatTime, remainingSeconds,
     idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
     advanceCycle, shouldAutoStart, sessionRecord, blockInProgress, elapsedSeconds,
+    ATTENTION,
 } from '../core/clock.js';
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
 import { resolveTheme } from '../core/themes.js';
@@ -84,7 +85,19 @@ async function paintAction(text, color) {
 async function renderAction(timer, settings, customThemes) {
     const now = Date.now();
     const theme = resolveTheme(settings.theme, customThemes);
-    await paintAction(badgeText(timer, now), theme[timer.mode] || theme.pomodoro);
+    const text = badgeText(timer, now);
+    // Both cases are one accent lookup; the only question is WHOSE mode.
+    //
+    // Running minutes are a status, so they take the accent of the block that is
+    // running. The "!" instead names the block that just ENDED — finish a break
+    // and it goes the break's colour, not the queued pomodoro's. That block is
+    // the thing the mark is reporting, and it is the half the user cannot read
+    // anywhere else: the queued one is already spelled out in the tooltip.
+    //
+    // endedMode is absent on a timer awaiting for any other reason (and on one
+    // stored by a previous version), so fall back to the timer's own mode.
+    const mode = text === ATTENTION ? (timer.endedMode || timer.mode) : timer.mode;
+    await paintAction(text, theme[mode] || theme.pomodoro);
 
     const label = MODE_LABELS[timer.mode] || 'Pomoflow';
     let title;
@@ -205,7 +218,7 @@ async function completeBlock(timer, completedRecord) {
     let next = idleTimer(nextMode, settings);
     next = shouldAutoStart(nextMode, settings)
         ? startTimer(next, Date.now(), crypto.randomUUID())
-        : awaitingTimer(next);
+        : awaitingTimer(next, timer.mode);
     await commit(next);
 
     if (timer.mode === 'pomodoro') {

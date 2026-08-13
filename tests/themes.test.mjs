@@ -97,6 +97,15 @@ test("hsl lands where the sliders say it should", () => {
   // Hue is a circle; a slider at either end must not fall off it.
   assert.equal(hslToHex({ h: 360, s: 100, l: 50 }), "#ff0000");
 
+  // And off either end it has to keep wrapping. The sector lookup used to
+  // normalise the hue while `x` was computed from the raw value, so the two
+  // disagreed outside 0..360 and a hue of -60 produced the channel "-ff". No
+  // caller feeds it an out-of-range hue today, which is exactly why the bug
+  // needs a test rather than a caller to keep it fixed.
+  assert.equal(hslToHex({ h: -60, s: 100, l: 50 }), "#ff00ff");
+  assert.equal(hslToHex({ h: 420, s: 100, l: 50 }), "#ffff00");
+  assert.equal(hslToHex({ h: -420, s: 100, l: 50 }), hslToHex({ h: 300, s: 100, l: 50 }));
+
   const grey = hexToHsl("#808080");
   assert.equal(grey.s, 0, "a grey has no saturation to drag");
 });

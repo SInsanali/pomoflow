@@ -69,6 +69,24 @@ When a block ends and the next one is not set to auto-start, the icon becomes a
 and the popup is closed by definition. Paused or merely idle, the static
 Pomoflow mark comes back.
 
+Its **colour names the block that just ended** — not the one queued behind it.
+Finish a short break and the `!` wears the short break's accent even though a
+pomodoro is what waits. The block that ended is what the mark is reporting, and
+it is the half you cannot read anywhere else: the queued block is already spelled
+out in the tooltip.
+
+The ended mode is carried on the timer (`clock.awaitingTimer` writes
+`endedMode`), because the timer is the only thing persisted across a
+service-worker restart and a repaint on wake has no other route back to it. It
+cannot be derived from the waiting timer either — a waiting pomodoro can follow
+either kind of break. A timer stored by an older version has no `endedMode`, so
+the paint falls back to the timer's own mode.
+
+That makes the `!` always one of the theme's three accents, never a colour
+between them, so the ≥15 ΔE separation `tests/themes.test.mjs` already asserts
+between a theme's three modes is what keeps a finished short break from looking
+like a finished long one.
+
 ## Sound
 
 End-of-block audio plays from an **offscreen document**, since service workers
