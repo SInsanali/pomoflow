@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bucketDaily, barGeometry, heatmapCells, computeStats } from "../src/core/charts.js";
+import {
+  bucketDaily, barGeometry, heatmapCells, computeStats,
+  denseDays, currentStreak, weekdayInitial, weekBars, ringGeometry, formatDuration,
+} from "../src/core/charts.js";
 
 test("bucketDaily sums pomodoro focus per local day", () => {
   const sessions = [
@@ -104,4 +107,117 @@ test("computeStats on an empty history is all zeros, not NaN", () => {
   const stats = computeStats([], 0, Date.parse("2026-08-09T12:00:00Z"));
   assert.deepEqual(stats.daily, []);
   assert.deepEqual(stats.totals, { today_seconds: 0, week_seconds: 0, all_time_blocks: 0 });
+});
+
+// ===== the stats sheet's helpers =====
+//
+// Shared with the full page's dashboard, which is the point: a day boundary or a
+// rounding rule that differed between the two surfaces would be a bug either way.
+
+test("denseDays fills gaps with zero and ends on today", () => {
+  const now = Date.parse("2026-08-09T12:00:00Z");
+  const daily = [
+    { date: "2026-08-05", focus_seconds: 900, blocks: 1 },
+    { date: "2026-08-09", focus_seconds: 3000, blocks: 2 },
+  ];
+  const days = denseDays(daily, 7, { tzOffsetMinutes: 0, nowMs: now });
+
+  assert.deepEqual(days.map(d => d.date), [
+    "2026-08-03", "2026-08-04", "2026-08-05",
+    "2026-08-06", "2026-08-07", "2026-08-08", "2026-08-09",
+  ]);
+  assert.equal(days.at(-1).focus_seconds, 3000, "today is the last entry");
+  assert.equal(days[2].blocks, 1, "the sparse day landed in its own slot");
+  assert.equal(days[3].focus_seconds, 0, "a day with no sessions is zero, not absent");
+  // heatmapCells reads focusSeconds, everything else focus_seconds.
+  assert.equal(days.at(-1).focusSeconds, 3000, "both spellings are emitted");
+});
+
+test("denseDays crosses a month boundary without inventing a day", () => {
+  const days = denseDays([], 3, {
+    tzOffsetMinutes: 0, nowMs: Date.parse("2026-09-01T12:00:00Z"),
+  });
+  assert.deepEqual(days.map(d => d.date), ["2026-08-30", "2026-08-31", "2026-09-01"]);
+});
+
+test("denseDays uses the local day as today, matching the buckets", () => {
+  // 01:00Z on the 9th is still the 8th at UTC-5, so that is the last bar.
+  const now = Date.parse("2026-08-09T01:00:00Z");
+  assert.equal(denseDays([], 2, { tzOffsetMinutes: -300, nowMs: now }).at(-1).date,
+               "2026-08-08");
+  assert.equal(denseDays([], 2, { tzOffsetMinutes: 0, nowMs: now }).at(-1).date,
+               "2026-08-09");
+});
+
+test("currentStreak counts consecutive days back from today", () => {
+  const daily = [
+    { date: "2026-08-06", blocks: 1 },
+    { date: "2026-08-07", blocks: 3 },
+    { date: "2026-08-08", blocks: 2 },
+    { date: "2026-08-09", blocks: 1 },
+  ];
+  assert.equal(currentStreak(daily, "2026-08-09"), 4);
+});
+
+// The rule that makes the number usable: an untouched today is a day still in
+// progress, not a broken streak.
+test("currentStreak survives an empty today but not an empty yesterday", () => {
+  const daily = [
+    { date: "2026-08-07", blocks: 2 },
+    { date: "2026-08-08", blocks: 1 },
+  ];
+  assert.equal(currentStreak(daily, "2026-08-09"), 2, "counted back from yesterday");
+  assert.equal(currentStreak(daily, "2026-08-10"), 0, "two days idle ends it");
+});
+
+test("currentStreak ignores break-only days", () => {
+  const daily = [
+    { date: "2026-08-08", blocks: 0, focus_seconds: 0 },
+    { date: "2026-08-09", blocks: 1 },
+  ];
+  assert.equal(currentStreak(daily, "2026-08-09"), 1, "the 8th holds no pomodoro");
+});
+
+test("currentStreak on an empty history is zero", () => {
+  assert.equal(currentStreak([], "2026-08-09"), 0);
+});
+
+test("weekdayInitial reads the key as a calendar date, not a UTC instant", () => {
+  // 2026-08-09 is a Sunday, 2026-08-10 a Monday.
+  assert.equal(weekdayInitial("2026-08-09"), "S");
+  assert.equal(weekdayInitial("2026-08-10"), "M");
+  assert.equal(weekdayInitial("2026-08-14"), "F");
+});
+
+test("weekBars scales to the tallest day and floors the rest above zero", () => {
+  const { percents, meanPercent } = weekBars([0, 60, 3000], { minVisible: 4 });
+  assert.equal(percents[0], 0, "an empty day stays exactly empty");
+  assert.equal(percents[1], 4, "2% of the max would be invisible, so it is floored");
+  assert.equal(percents[2], 100, "the tallest day fills the track");
+  assert.equal(Math.round(meanPercent), 34, "mean of 1020s against a 3000s max");
+});
+
+test("weekBars on an all-zero week draws nothing and does not divide by zero", () => {
+  const { percents, mean, meanPercent } = weekBars([0, 0, 0], { minVisible: 4 });
+  assert.deepEqual(percents, [0, 0, 0]);
+  assert.equal(mean, 0);
+  assert.equal(meanPercent, 0, "guarded max, so no NaN reaches the style attribute");
+});
+
+test("ringGeometry fills a fraction of the circumference and clamps overshoot", () => {
+  const full = 2 * Math.PI * 42;
+  assert.equal(ringGeometry(0, 4, 42).filled, 0);
+  assert.ok(Math.abs(ringGeometry(2, 4, 42).filled - full / 2) < 1e-9, "half a turn");
+  assert.equal(ringGeometry(9, 4, 42).filled, full, "beating the goal does not wrap");
+  assert.equal(ringGeometry(3, 0, 42).filled, 0, "a zero goal is empty, not NaN");
+});
+
+test("formatDuration rounds to minutes before splitting the hour", () => {
+  assert.equal(formatDuration(0), "0m");
+  assert.equal(formatDuration(2700), "45m");
+  assert.equal(formatDuration(4500), "1h 15m");
+  // Rounding the remainder separately gives "60m" / "1h 60m" here.
+  assert.equal(formatDuration(3599), "1h 0m");
+  assert.equal(formatDuration(7199), "2h 0m");
+  assert.equal(formatDuration(undefined), "0m", "an absent total is not NaN");
 });

@@ -57,6 +57,101 @@ export function computeStats(sessions, tzOffsetMinutes, nowMs = Date.now()) {
   };
 }
 
+// stats.daily is sparse — only days that actually have sessions. Densify it into
+// a contiguous run of the last `n` calendar days ending today, filling the gaps
+// with zero, so a bar strip or a heatmap reads as a real timeline instead of a
+// packed list of active days.
+//
+// The walk back is done in date-string space (addDays), not by subtracting from
+// a Date: a DST boundary inside the window would otherwise shift a day, and the
+// keys have to line up with bucketDaily's exactly or a day's work goes missing.
+// Both spellings of the focus total are emitted because the two chart helpers
+// disagree — heatmapCells reads `focusSeconds`, everything else `focus_seconds`.
+export function denseDays(daily, n, { tzOffsetMinutes = 0, nowMs = Date.now() } = {}) {
+  const byDate = new Map(daily.map(d => [d.date, d]));
+  const today = localDate(new Date(nowMs).toISOString(), tzOffsetMinutes);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const date = addDays(today, -i);
+    const rec = byDate.get(date);
+    out.push({
+      date,
+      focus_seconds: rec ? rec.focus_seconds : 0,
+      focusSeconds: rec ? rec.focus_seconds : 0,
+      blocks: rec ? rec.blocks : 0,
+    });
+  }
+  return out;
+}
+
+// Consecutive days with at least one pomodoro, counted back from today.
+//
+// An empty *today* does not break the streak: at 9am you have not lost anything
+// yet, so the count starts from yesterday in that case. Any other gap ends it.
+export function currentStreak(daily, todayStr) {
+  const active = new Set(daily.filter(d => (d.blocks || 0) > 0).map(d => d.date));
+  let cursor = active.has(todayStr) ? todayStr : addDays(todayStr, -1);
+  let streak = 0;
+  while (active.has(cursor)) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+// The single letter under a bar. Read as UTC on purpose: the key is already a
+// local calendar date, so re-interpreting it in the local zone would shift it a
+// day west of UTC and label Monday's bar "S".
+export function weekdayInitial(dateStr) {
+  return WEEKDAY_INITIALS[new Date(dateStr + 'T00:00:00Z').getUTCDay()];
+}
+
+// "1h 15m" / "45m", shared by both stats surfaces so they never disagree about
+// what a duration looks like. Rounds to whole minutes *first* and then splits:
+// rounding the hour remainder separately turns 59m59s into "60m" and 1h59m59s
+// into "1h 60m".
+export function formatDuration(seconds) {
+  const totalMinutes = Math.round(Math.max(0, seconds || 0) / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// The bar strip in the popup's stats sheet, as percentages rather than pixels:
+// the strip is laid out by CSS (flex columns, each bar a % of the track height)
+// so it can follow the popup's width without a viewBox, and percentages are the
+// only geometry that layout needs from here.
+//
+// `minVisible` floors every non-zero day, because a five-minute day against a
+// three-hour one rounds to a bar too short to see — and "I did nothing" and "I
+// did a little" must not look the same. Zero stays exactly zero.
+export function weekBars(values, { minVisible = 0 } = {}) {
+  const max = Math.max(1, ...values);
+  const mean = values.length
+    ? values.reduce((sum, v) => sum + v, 0) / values.length
+    : 0;
+  return {
+    max,
+    mean,
+    percents: values.map(v => (v <= 0 ? 0 : Math.max(minVisible, (v / max) * 100))),
+    meanPercent: (mean / max) * 100,
+  };
+}
+
+// A progress ring's stroke dashes. Drawn as `stroke-dasharray="filled gap"` with
+// the gap set to the whole circumference, so one dash paints the arc and the
+// rest of the circle stays empty with no dashoffset arithmetic.
+//
+// Clamped to one full turn: overshooting a goal must not wrap the arc back over
+// itself, which reads as *less* progress. The caller still shows the true count.
+export function ringGeometry(value, goal, radius) {
+  const circumference = 2 * Math.PI * radius;
+  const fraction = goal > 0 ? Math.min(1, Math.max(0, value / goal)) : 0;
+  return { circumference, filled: circumference * fraction, fraction };
+}
+
 // Bar rects for a simple column chart. The tallest value maps to full height;
 // a guard of max>=1 keeps an all-zero series from dividing by zero.
 export function barGeometry(values, { width, height, gap }) {
