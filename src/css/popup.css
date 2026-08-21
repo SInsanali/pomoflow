@@ -138,10 +138,53 @@ body.popup {
 .popup-meta {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     width: 100%;
     font-size: 0.72rem;
     color: var(--text-tertiary);
     letter-spacing: 0.4px;
+}
+
+.meta-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Deliberately faint. It sits in the same line as a label the eye reads once a
+   block, and a control that pulls attention there would be a control competing
+   with the clock. Hover is what makes it a button. */
+.meta-reset {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    margin: -2px -2px -2px 0;   /* keeps the glyph flush with the count's edge */
+    border: none;
+    background: none;
+    color: inherit;
+    opacity: 0.65;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.meta-reset svg {
+    /* A hair bigger than the count's cap height: below about 12px the
+       arrowhead stops reading as an arrowhead and the glyph turns into a
+       broken circle. */
+    width: 12px;
+    height: 12px;
+}
+
+.meta-reset:hover {
+    opacity: 1;
+    color: var(--accent);
+}
+
+.meta-reset:focus-visible {
+    opacity: 1;
+    outline: 1px solid var(--accent);
+    outline-offset: 1px;
 }
 
 /* ===== Quick settings =====

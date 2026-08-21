@@ -553,6 +553,34 @@
             align-items: center;
             gap: 4px;
         }
+        /* Faint by design: it shares a line with a figure the eye checks once
+           a block, and a loud control there would compete with the clock. */
+        .count-reset {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px;
+            margin-left: 2px;
+            border: none;
+            background: none;
+            color: inherit;
+            opacity: 0.45;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: opacity 0.2s, color 0.2s;
+        }
+        .count-reset svg {
+            width: 12px;
+            height: 12px;
+        }
+        .count-reset:hover {
+            opacity: 1;
+            color: var(--accent);
+        }
+        .count-reset:focus-visible {
+            opacity: 1;
+            outline: 1px solid var(--accent);
+            outline-offset: 1px;
+        }
         .goal-display {
             display: flex;
             align-items: center;

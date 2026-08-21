@@ -40,6 +40,12 @@ el('start-btn').addEventListener('click', () => surface.command('TOGGLE'));
 el('reset-btn').addEventListener('click', () => surface.command('RESET'));
 el('skip-btn').addEventListener('click', () => surface.command('SKIP'));
 
+// No arm-and-confirm here, unlike the settings reset below: this clears a
+// display counter that clears itself at midnight anyway, and every block it
+// counted is still in the dashboard. The cost of a mis-click is one tooltip's
+// worth of surprise.
+el('count-reset-btn').addEventListener('click', () => surface.command('RESET_COUNT'));
+
 document.querySelectorAll('.mode-tab').forEach(tab => {
     tab.addEventListener('click', () => surface.command('SWITCH_MODE', { mode: tab.dataset.mode }));
 });

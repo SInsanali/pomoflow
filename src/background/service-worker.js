@@ -10,6 +10,7 @@ import {
     reconcile, remaining, badgeText, formatTime, remainingSeconds,
     idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
     advanceCycle, shouldAutoStart, sessionRecord, blockInProgress, elapsedSeconds,
+    rolloverCycle, resetCycle,
 } from '../core/clock.js';
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
 import { resolveTheme } from '../core/themes.js';
@@ -179,6 +180,27 @@ async function notify(title, message) {
     }
 }
 
+// ===== THE CYCLE =====
+
+// Every read of the cycle goes through here (the manual reset below is the one
+// exception, and it stamps today itself), so the day boundary is checked on
+// every path that reads or increments the counters — completion, skip, and
+// every state read a surface makes.
+//
+// There is no alarm for midnight and there deliberately isn't one: an idle
+// browser has no reason to wake, and a stamp comparison on read gets the same
+// answer whenever the question is finally asked.
+async function loadCycle(settings) {
+    const db = store();
+    const cycle = await db.getCycle();
+    const s = settings || (await db.getSettings()).data;
+    const rolled = rolloverCycle(cycle, Date.now(), s.resetDaily);
+    // Identity check, not a deep compare: rolloverCycle returns its input
+    // untouched on the same-day path, so this writes at most once per day.
+    if (rolled !== cycle) await db.setCycle(rolled);
+    return rolled;
+}
+
 // ===== BLOCK COMPLETION =====
 
 // Finish the current block and move to the next one.
@@ -191,7 +213,8 @@ async function notify(title, message) {
 // So: capture the record first, then advance, then commit.
 async function completeBlock(timer, completedRecord) {
     const db = store();
-    const [{ data: settings }, cycle] = await Promise.all([db.getSettings(), db.getCycle()]);
+    const { data: settings } = await db.getSettings();
+    const cycle = await loadCycle(settings);
 
     // Captured from the OLD timer, before anything advances.
     await db.logSession(completedRecord);
@@ -273,9 +296,8 @@ async function cmdReset() {
 async function cmdSkip() {
     const db = store();
     const now = Date.now();
-    const [timer, { data: settings }, cycle] = await Promise.all([
-        db.getTimer(), db.getSettings(), db.getCycle(),
-    ]);
+    const [timer, { data: settings }] = await Promise.all([db.getTimer(), db.getSettings()]);
+    const cycle = await loadCycle(settings);
 
     if (blockInProgress(timer, now)) {
         await db.logSession(sessionRecord(timer, {
@@ -316,9 +338,18 @@ async function cmdSettingsChanged() {
 
 async function cmdAdjustGoal(delta) {
     const db = store();
-    const cycle = await db.getCycle();
+    const cycle = await loadCycle();
     const sessionGoal = Math.max(1, Math.min(20, cycle.sessionGoal + delta));
     return db.setCycle({ ...cycle, sessionGoal });
+}
+
+// The button next to the count. Zeroes today's tally without touching session
+// history: the dashboard's record of what was actually worked is not a thing a
+// counter button gets to delete.
+async function cmdResetCount() {
+    const db = store();
+    const cycle = await db.getCycle();
+    return db.setCycle(resetCycle(cycle, Date.now()));
 }
 
 async function openApp() {
@@ -351,9 +382,10 @@ async function popOut() {
 
 async function fullState() {
     const db = store();
-    const [timer, cycle, { data: settings }, customThemes] = await Promise.all([
-        db.getTimer(), db.getCycle(), db.getSettings(), db.getCustomThemes(),
+    const [timer, { data: settings }, customThemes] = await Promise.all([
+        db.getTimer(), db.getSettings(), db.getCustomThemes(),
     ]);
+    const cycle = await loadCycle(settings);
     return { timer, cycle, settings, customThemes, now: Date.now() };
 }
 
@@ -401,6 +433,7 @@ const HANDLERS = {
     SWITCH_MODE: (msg) => cmdSwitchMode(msg.mode),
     SETTINGS_CHANGED: cmdSettingsChanged,
     ADJUST_GOAL: (msg) => cmdAdjustGoal(msg.delta),
+    RESET_COUNT: cmdResetCount,
     OPEN_APP: openApp,
     POP_OUT: popOut,
     TEST_SOUND: async (msg) => {

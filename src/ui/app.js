@@ -111,6 +111,10 @@ document.querySelectorAll('.style-switch button').forEach(btn => {
     btn.addEventListener('click', () => patchSettings({ timerStyle: btn.dataset.style }));
 });
 
+// No confirm(): this clears a display counter that clears itself at midnight
+// anyway, and every block it counted is still in the dashboard.
+el('count-reset-btn').addEventListener('click', () => surface.command('RESET_COUNT'));
+
 el('goal-down').addEventListener('click', () => surface.command('ADJUST_GOAL', { delta: -1 }));
 el('goal-up').addEventListener('click', () => surface.command('ADJUST_GOAL', { delta: 1 }));
 

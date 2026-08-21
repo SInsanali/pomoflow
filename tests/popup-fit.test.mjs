@@ -18,7 +18,7 @@ const SHORT = 300;     // a sheet that fits inside it (the theme editor's view)
 
 const IDS = [
     'timer-stage', 'start-btn', 'reset-btn', 'skip-btn', 'open-app-btn',
-    'mode-label', 'session-counter', 'goal-progress', 'cycle-dots',
+    'mode-label', 'session-counter', 'goal-progress', 'count-reset-btn', 'cycle-dots',
     'quick-settings', 'quick-settings-btn', 'qs-close', 'qs-themes',
     'qs-pomodoro', 'qs-short-break', 'qs-long-break', 'qs-auto-breaks',
     'qs-auto-pomodoros', 'qs-notifications', 'qs-font', 'qs-sound', 'qs-play',

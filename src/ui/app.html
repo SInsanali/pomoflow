@@ -99,8 +99,18 @@
             <div class="session-stats">
                 <div class="session-counter" id="session-counter">Study 1</div>
                 <div class="session-meta">
-                    <div class="streak-display" id="streak-display" title="Total pomodoros completed">
+                    <div class="streak-display" id="streak-display" title="Pomodoros completed today">
                         <span id="streak-count">0</span> completed
+                        <!-- The count resets itself at midnight; this starts
+                             today over sooner. History is not touched. -->
+                        <button id="count-reset-btn" class="count-reset" title="Reset today's count"
+                                aria-label="Reset today's count">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                <path d="M3 3v5h5" />
+                            </svg>
+                        </button>
                     </div>
                     <div class="goal-display">
                         <button id="goal-down">−</button>
@@ -305,6 +315,17 @@ Space: start/pause  ||  R: reset  ||  N: next
                         <button class="action-btn" id="preset-save-btn">Save</button>
                     </div>
                     <div class="preset-list" id="preset-list"></div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Session Count</h3>
+                    <div class="setting-row">
+                        <label>Reset the count each day</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-reset-daily" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="setting-group">

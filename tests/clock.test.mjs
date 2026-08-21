@@ -9,6 +9,7 @@ import {
   remaining, remainingSeconds, formatTime, badgeText,
   reconcile, idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
   advanceCycle, shouldAutoStart, blockInProgress, elapsedSeconds, sessionLabel,
+  dayStamp, rolloverCycle, resetCycle,
 } from "../src/core/clock.js";
 import { DEFAULT_SETTINGS, DEFAULT_CYCLE } from "../src/core/defaults.js";
 
@@ -114,6 +115,61 @@ test("only pomodoros advance the cycle counters", () => {
   assert.equal(nextMode, "pomodoro");
   assert.equal(next.pomodorosInCycle, 2);
   assert.equal(next.totalPomodoros, 7);
+});
+
+// ===== THE DAY BOUNDARY =====
+
+test("the day stamp is the local calendar day, not UTC's", () => {
+  // 00:30 local on whatever day T0 lands on: the stamp must agree with the
+  // Date object the user's clock shows, which toISOString() would not west of
+  // Greenwich.
+  const local = new Date(T0);
+  local.setHours(0, 30, 0, 0);
+  const expected = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}` +
+    `-${String(local.getDate()).padStart(2, "0")}`;
+  assert.equal(dayStamp(local.getTime()), expected);
+});
+
+test("a cycle from an earlier day is zeroed on the next read", () => {
+  const stale = { ...DEFAULT_CYCLE, pomodorosInCycle: 2, totalPomodoros: 20, sessionGoal: 8,
+    dayStamp: dayStamp(T0 - 3 * 86_400_000) };
+  const rolled = rolloverCycle(stale, T0);
+  assert.equal(rolled.totalPomodoros, 0);
+  assert.equal(rolled.pomodorosInCycle, 0);
+  assert.equal(rolled.sessionGoal, 8, "the goal is a target, not a tally");
+  assert.equal(rolled.dayStamp, dayStamp(T0));
+});
+
+test("a cycle already stamped today is returned untouched", () => {
+  const today = { ...DEFAULT_CYCLE, totalPomodoros: 3, dayStamp: dayStamp(T0) };
+  // Identity, not equality: the caller skips the storage write on this path.
+  assert.equal(rolloverCycle(today, T0 + 3_600_000), today);
+});
+
+test("a cycle with no stamp counts as stale", () => {
+  // Written before the daily reset existed: its count accrued over an unknown
+  // number of days, which is exactly the state this fixes.
+  const legacy = { ...DEFAULT_CYCLE, totalPomodoros: 20 };
+  assert.equal(rolloverCycle(legacy, T0).totalPomodoros, 0);
+});
+
+test("with the daily reset off the count survives, but the stamp still moves", () => {
+  const stale = { ...DEFAULT_CYCLE, totalPomodoros: 20, dayStamp: dayStamp(T0 - 86_400_000) };
+  const rolled = rolloverCycle(stale, T0, false);
+  assert.equal(rolled.totalPomodoros, 20);
+  // Re-stamping is what stops switching the setting back on from wiping a day
+  // that is already underway.
+  assert.equal(rolled.dayStamp, dayStamp(T0));
+});
+
+test("the manual reset zeroes the count and stamps today", () => {
+  const cycle = { ...DEFAULT_CYCLE, pomodorosInCycle: 3, totalPomodoros: 9, sessionGoal: 6 };
+  const reset = resetCycle(cycle, T0);
+  assert.equal(reset.totalPomodoros, 0);
+  assert.equal(reset.pomodorosInCycle, 0);
+  assert.equal(reset.sessionGoal, 6);
+  // Stamped, so the automatic rollover does not immediately fire again.
+  assert.equal(rolloverCycle(reset, T0), reset);
 });
 
 test("breaks auto-start, focus blocks wait for you", () => {

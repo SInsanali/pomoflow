@@ -24,6 +24,7 @@ export function createSettingsPanel({ db, getState, patchSettings, onRefresh, th
         el('setting-volume').value = settings.volume * 100;
         el('volume-value').textContent = Math.round(settings.volume * 100) + '%';
         el('setting-notifications').checked = settings.notifications;
+        el('setting-reset-daily').checked = settings.resetDaily;
     }
 
     // Durations are read back on close. Changing one mid-block does NOT yank the
@@ -41,6 +42,7 @@ export function createSettingsPanel({ db, getState, patchSettings, onRefresh, th
             sound: el('setting-sound').value,
             volume: parseInt(el('setting-volume').value, 10) / 100,
             notifications: el('setting-notifications').checked,
+            resetDaily: el('setting-reset-daily').checked,
         });
         await send('SETTINGS_CHANGED');
         await onRefresh();

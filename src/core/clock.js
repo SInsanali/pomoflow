@@ -177,6 +177,47 @@ export function resetTimer(timer, settings) {
     return idleTimer(timer.mode, settings);
 }
 
+// ===== THE DAY BOUNDARY =====
+//
+// The cycle counters are a *today* figure, not a lifetime one: "20/4" reading
+// 20 because the count has been climbing since Tuesday tells you nothing about
+// the day you are actually in. Session history is untouched by any of this —
+// the dashboard is where the long view lives.
+
+// Local calendar day, not UTC: the boundary that matters is the user's
+// midnight. Deliberately not toISOString().slice(0, 10), which would roll the
+// count over mid-evening for anyone west of Greenwich.
+export function dayStamp(nowMs) {
+    const d = new Date(nowMs);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Zero the counters if the stored stamp is not today's.
+//
+// Returns the SAME object when nothing changes, so callers can skip the write
+// (and the storage.onChanged refresh that a write would fan out to every open
+// surface) on the overwhelmingly common no-op path.
+//
+// A cycle with no stamp at all — one written before this existed — counts as
+// stale and is reset. That is the honest reading: its count accrued over an
+// unknown number of days, which is exactly the state this fixes.
+export function rolloverCycle(cycle, nowMs, enabled = true) {
+    const stamp = dayStamp(nowMs);
+    if (cycle.dayStamp === stamp) return cycle;
+    // With the daily reset off we still re-stamp, so that turning it back on
+    // starts counting from that day rather than wiping a day already underway.
+    if (!enabled) return { ...cycle, dayStamp: stamp };
+    return { ...cycle, pomodorosInCycle: 0, totalPomodoros: 0, dayStamp: stamp };
+}
+
+// The manual reset behind the button next to the count. Same zeroing as the
+// rollover, and it stamps today so the automatic one does not immediately
+// re-fire. `sessionGoal` survives: it is a target, not a tally.
+export function resetCycle(cycle, nowMs) {
+    return { ...cycle, pomodorosInCycle: 0, totalPomodoros: 0, dayStamp: dayStamp(nowMs) };
+}
+
 // Advance the cycle after a pomodoro or break finishes.
 //
 // Preserves v1 exactly: a completed *pomodoro* bumps both counters, and a long

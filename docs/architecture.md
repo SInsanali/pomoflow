@@ -14,6 +14,23 @@ to drift.
 A paused block stores `remainingMs` and drops `endsAt` entirely, so it cannot
 bleed wall-clock time while you are away.
 
+## The session count is a *today* figure
+
+The cycle counters behind "Study 3" and "20/4" are stamped with the local
+calendar day they belong to, and zero themselves when that stamp is not today's.
+A count that has been climbing since Tuesday says nothing about the day you are
+actually in; the dashboard is where the long view lives, and nothing here
+touches session history.
+
+There is **no midnight alarm**, deliberately — an idle browser has no reason to
+wake. The stamp is compared on every read of the cycle instead, so the rollover
+lands whenever the question is next asked: a state read from any surface, a
+block completing, or a skip. Same answer, no wake-up.
+
+The button beside the count starts today over by hand; `Settings → Session
+Count` turns the automatic reset off, and the stamp keeps moving while it is off
+so turning it back on does not wipe a day already underway.
+
 ## Modules
 
 - **`src/background/service-worker.js`** is the only authority. It owns block

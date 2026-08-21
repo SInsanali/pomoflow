@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 // Read the accents rather than repeating them: what these tests care about is
 // that the icon follows the theme, not what shade of violet nebula is this year.
 import { THEMES } from "../src/core/themes.js";
+import { dayStamp } from "../src/core/clock.js";
 
 const T0 = 1_760_000_000_000;
 
@@ -370,6 +371,74 @@ test("the goal is clamped to a sane range", async () => {
 
   for (let i = 0; i < 40; i++) await sendMessage(listeners, { type: "ADJUST_GOAL", delta: -1 });
   assert.equal(storage.cycle.sessionGoal, 1);
+});
+
+// ===== THE DAY BOUNDARY =====
+//
+// The counters are a today figure. Nothing wakes the browser at midnight, so
+// the rollover has to happen on the next read — which is what these cover.
+
+test("a count left over from yesterday is zeroed the next time state is read", async () => {
+  const { listeners, storage } = await freshWorker();
+  storage.cycle = {
+    pomodorosInCycle: 2, totalPomodoros: 20, sessionGoal: 4,
+    dayStamp: dayStamp(Date.now() - 2 * 86_400_000),
+  };
+
+  const state = await sendMessage(listeners, { type: "GET_STATE" });
+  assert.equal(state.cycle.totalPomodoros, 0);
+  assert.equal(state.cycle.pomodorosInCycle, 0);
+  assert.equal(state.cycle.sessionGoal, 4, "the goal is not a tally");
+  assert.equal(storage.cycle.dayStamp, dayStamp(Date.now()), "persisted, not just rendered");
+});
+
+test("a block completing after midnight counts toward the new day, not the old one", async () => {
+  const { listeners, storage } = await freshWorker();
+  storage.cycle = {
+    pomodorosInCycle: 3, totalPomodoros: 20, sessionGoal: 4,
+    dayStamp: dayStamp(Date.now() - 86_400_000),
+  };
+
+  await sendMessage(listeners, { type: "START" });
+  const realNow = Date.now;
+  Date.now = () => storage.timer.endsAt;
+  try {
+    await listeners.alarm({ name: "block-end" });
+  } finally {
+    Date.now = realNow;
+  }
+
+  assert.equal(storage.cycle.totalPomodoros, 1, "yesterday's 20 did not carry over");
+  // Had the stale pomodorosInCycle: 3 survived, this block would have been the
+  // fourth and dropped straight into a long break.
+  assert.equal(storage.timer.mode, "shortBreak");
+});
+
+test("the daily reset can be turned off, and then the count accumulates", async () => {
+  const { listeners, storage } = await freshWorker();
+  storage.settings = { resetDaily: false };
+  storage.cycle = {
+    pomodorosInCycle: 1, totalPomodoros: 20, sessionGoal: 4,
+    dayStamp: dayStamp(Date.now() - 86_400_000),
+  };
+
+  const state = await sendMessage(listeners, { type: "GET_STATE" });
+  assert.equal(state.cycle.totalPomodoros, 20);
+  assert.equal(storage.cycle.dayStamp, dayStamp(Date.now()), "still re-stamped");
+});
+
+test("RESET_COUNT zeroes the count and leaves history alone", async () => {
+  const { listeners, storage } = await freshWorker();
+  storage.sessions = [{ id: "s1", mode: "pomodoro", completed: 1 }];
+  storage.cycle = {
+    pomodorosInCycle: 2, totalPomodoros: 6, sessionGoal: 8, dayStamp: dayStamp(Date.now()),
+  };
+
+  const state = await sendMessage(listeners, { type: "RESET_COUNT" });
+  assert.equal(state.cycle.totalPomodoros, 0);
+  assert.equal(state.cycle.pomodorosInCycle, 0);
+  assert.equal(state.cycle.sessionGoal, 8);
+  assert.equal(storage.sessions.length, 1, "the dashboard's record is not a counter");
 });
 
 test("a full cycle of four pomodoros lands on a long break", async () => {

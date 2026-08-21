@@ -24,12 +24,18 @@ export const DEFAULT_SETTINGS = {
     colorBackground: true,
     hideBgWhenRunning: false,
     notifications: true,
+    // The cycle counters are a today figure. Off, they accumulate forever —
+    // which is what v1 did, and what made "20/4" mean nothing.
+    resetDaily: true,
 };
 
 export const DEFAULT_CYCLE = {
     pomodorosInCycle: 0,   // 0-3, resets after a long break
     totalPomodoros: 0,
     sessionGoal: 4,
+    // Local calendar day the counters above belong to (clock.dayStamp). null
+    // means "never stamped", which clock.rolloverCycle treats as stale.
+    dayStamp: null,
 };
 
 // A fresh, idle timer. `endsAt` is authoritative while running; `remainingMs`
