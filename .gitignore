@@ -15,6 +15,9 @@ venv/
 .AppleDouble
 .LSOverride
 
+# Claude Code — local settings and scratch worktrees, per-machine by nature
+.claude/
+
 # IDE
 .idea/
 .vscode/
