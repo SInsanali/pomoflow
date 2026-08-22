@@ -9,6 +9,10 @@ import {
     resolveTheme, withRecentTheme,
 } from '../core/themes.js';
 import { showFontFaces, syncFontFace } from './font-picker.js';
+import {
+    computeStats, denseDays, weekBars, currentStreak, weekdayInitial,
+    ringGeometry, formatDuration,
+} from '../core/charts.js';
 
 const el = (id) => document.getElementById(id);
 const db = store();
@@ -33,6 +37,12 @@ const surface = createSurface({
         // an unsaved draft has to repaint itself after every refresh or the
         // preview blinks away the moment the service worker writes anything.
         if (themeEditorOpen()) previewEditorColors();
+        // Finishing a block writes `cycle`, which is one of the keys surface.js
+        // refreshes on — so a pomodoro completed while the sheet is open lands in
+        // the numbers without any extra plumbing. Refit after, because the
+        // headline can go from "45m" to "1h 15m" and the tiles from one line to
+        // two.
+        if (statsOpen()) renderStats().then(fitSheet);
     },
 });
 
@@ -56,6 +66,135 @@ el('open-app-btn').addEventListener('click', async () => {
     await send('OPEN_APP');
     window.close();
 });
+
+// ===== STATS =====
+//
+// A read-only sheet, so it owns no state and patches nothing: one storage read
+// of the session log, folded by core/charts.js, painted, done. The same fold the
+// full page's dashboard uses, so the two surfaces can never disagree about how
+// much focus time today held.
+
+// Minutes east of UTC — the offset computeStats buckets by, so the day keys it
+// produces are local calendar dates.
+const tz = -new Date().getTimezoneOffset();
+
+// Seven, not fourteen: at 340px wide, fourteen bars are 18px apart and the week
+// shape stops being readable. The full page keeps the long view.
+const WEEK_DAYS = 7;
+
+// A day with any focus at all must not render as an invisible sliver next to a
+// three-hour day — "a little" and "nothing" have to look different. 6% of the
+// 92px plot is ~5px, which is a legible capsule at the width the popup gives a
+// column (~39px).
+const MIN_BAR_PERCENT = 6;
+
+function statsOpen() {
+    return !el('stats-sheet').hidden;
+}
+
+// The bar strip: seven full-height pill tracks with the day's bar inside each,
+// plus the week's average as a hairline across them. Built as DOM rather than a
+// single SVG so the columns follow the popup's width with no viewBox arithmetic,
+// and so the initials row can share the plot's flex basis and line up under it.
+function renderWeek(days) {
+    const { percents, mean, meanPercent } = weekBars(
+        days.map(d => d.focus_seconds), { minVisible: MIN_BAR_PERCENT },
+    );
+    const plot = el('s-plot');
+    const labels = el('s-days');
+    plot.innerHTML = '';
+    labels.innerHTML = '';
+
+    // First child, so it paints under the bars: the average is context, not a
+    // value, and a dashed line over a bar reads as a hole in it.
+    if (mean > 0) {
+        const line = document.createElement('div');
+        line.className = 'stats-mean';
+        line.style.bottom = `${meanPercent}%`;
+        plot.appendChild(line);
+    }
+
+    days.forEach((day, i) => {
+        const isToday = i === days.length - 1;
+
+        const track = document.createElement('div');
+        track.className = 'stats-track' + (isToday ? ' today' : '');
+        track.title = `${day.date}: ${formatDuration(day.focus_seconds)}`;
+
+        const bar = document.createElement('div');
+        bar.className = 'stats-bar';
+        bar.style.height = `${percents[i]}%`;
+        track.appendChild(bar);
+        plot.appendChild(track);
+
+        const label = document.createElement('span');
+        if (isToday) label.className = 'today';
+        label.textContent = weekdayInitial(day.date);
+        labels.appendChild(label);
+    });
+}
+
+// Today's pomodoros against the session goal. Deliberately counted from the
+// session history rather than read off cycle.totalPomodoros: the header's count
+// is a *today* figure only while the daily reset is on, and it zeroes on a
+// manual reset. A goal ring has to mean the same thing either way.
+function renderRing(blocksToday, goal) {
+    const { circumference, filled } = ringGeometry(blocksToday, goal, 42);
+    el('s-ring').setAttribute('stroke-dasharray', `${filled} ${circumference}`);
+    el('s-ring-count').textContent = `${blocksToday}/${goal}`;
+}
+
+async function renderStats() {
+    if (!surface.state) await surface.refresh();
+    const { data } = await db.getSessions();
+    const stats = computeStats(data.sessions, tz);
+
+    // denseDays fills the gaps, so the last entry is today whether or not
+    // anything was logged — which is also where today's totals come from, with
+    // no second date calculation to drift out of step with the buckets.
+    const days = denseDays(stats.daily, WEEK_DAYS, { tzOffsetMinutes: tz });
+    const today = days[days.length - 1];
+    const weekSeconds = days.reduce((sum, d) => sum + d.focus_seconds, 0);
+    const goal = surface.state.cycle.sessionGoal;
+
+    el('s-today').textContent = formatDuration(today.focus_seconds);
+    el('s-today-sub').textContent =
+        `${today.blocks} of ${goal} pomodoro${goal === 1 ? '' : 's'}`;
+    renderRing(today.blocks, goal);
+
+    el('s-avg').textContent = `avg ${formatDuration(weekSeconds / WEEK_DAYS)}`;
+    renderWeek(days);
+
+    el('s-week').textContent = formatDuration(weekSeconds);
+    el('s-streak').textContent = currentStreak(stats.daily, today.date);
+    el('s-blocks').textContent = stats.totals.all_time_blocks;
+
+    // The tracks and the tiles still render, all at zero: an empty sheet with a
+    // line of text would not show what the sheet is going to look like.
+    el('s-empty').hidden = stats.totals.all_time_blocks > 0;
+}
+
+async function openStats() {
+    // One sheet at a time — they occupy the same box, and the popup is sized to
+    // whichever one is up.
+    if (quickSettingsOpen()) closeQuickSettings();
+    await renderStats();
+    el('stats-sheet').hidden = false;
+    el('stats-btn').setAttribute('aria-expanded', 'true');
+    fitSheetWhenFacesLand();
+}
+
+function closeStats() {
+    el('stats-sheet').hidden = true;
+    el('stats-btn').setAttribute('aria-expanded', 'false');
+    document.body.style.minHeight = '';   // let the popup shrink back to the timer
+}
+
+el('stats-btn').addEventListener('click', () => {
+    if (statsOpen()) closeStats(); else openStats();
+});
+
+el('stats-close').addEventListener('click', closeStats);
 
 // ===== QUICK SETTINGS =====
 //
@@ -389,9 +528,20 @@ function loadQuickForm() {
 // document.
 const POPUP_MAX_HEIGHT = 590;
 
+// Whichever sheet is over the timer, or null on the timer view itself. Both are
+// absolutely positioned, and openStats/openQuickSettings close each other, so at
+// most one of them is ever the box to measure.
+function openSheet() {
+    if (quickSettingsOpen()) return el('quick-settings');
+    if (statsOpen()) return el('stats-sheet');
+    return null;
+}
+
 function fitSheet() {
     document.body.style.minHeight = '';   // measure both boxes ungrown
-    const wanted = el('quick-settings').offsetHeight;
+    const sheet = openSheet();
+    if (!sheet) return;
+    const wanted = sheet.offsetHeight;
     if (wanted <= document.body.offsetHeight) return;
     document.body.style.minHeight = `${Math.min(wanted, POPUP_MAX_HEIGHT)}px`;
 }
@@ -404,12 +554,13 @@ function fitSheet() {
 function fitSheetWhenFacesLand() {
     fitSheet();
     document.fonts?.ready.then(() => {
-        if (quickSettingsOpen()) fitSheet();
+        if (openSheet()) fitSheet();
     });
 }
 
 async function openQuickSettings() {
     if (!surface.state) await surface.refresh();
+    if (statsOpen()) closeStats();
     loadQuickForm();
     el('quick-settings').hidden = false;
     el('quick-settings-btn').setAttribute('aria-expanded', 'true');
@@ -536,12 +687,17 @@ el('quick-settings').addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
     // Best-effort: Chrome may still close the whole popup on Escape, which is
     // no worse than the behaviour before the sheet existed.
-    if (e.code === 'Escape' && quickSettingsOpen()) {
+    if (e.code === 'Escape' && openSheet()) {
         e.preventDefault();
-        if (themeEditorOpen()) closeThemeEditor(); else closeQuickSettings();
+        // Innermost first: out of the editor, then out of whichever sheet is up.
+        if (themeEditorOpen()) closeThemeEditor();
+        else if (statsOpen()) closeStats();
+        else closeQuickSettings();
         return;
     }
-    if (e.target.tagName === 'INPUT' || quickSettingsOpen()) return;
+    // A sheet covers the clock, so the timer keys stay on the timer view: the
+    // feedback for hitting Space is a display you cannot currently see.
+    if (e.target.tagName === 'INPUT' || openSheet()) return;
     const action = { Space: 'TOGGLE', KeyR: 'RESET', KeyN: 'SKIP' }[e.code];
     if (!action) return;
     e.preventDefault();

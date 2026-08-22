@@ -101,14 +101,21 @@ export function hexToHsl(hex) {
 }
 
 export function hslToHex({ h, s, l }) {
+    // Wrapped ONCE, up front, and used for both terms below. The sector lookup
+    // used to normalise on its own while `x` was computed from the raw hue. Every
+    // caller today feeds this a hue already inside 0..360 (the popup's sliders),
+    // where the two agree — but the disagreement is a real bug for any hue off
+    // either end of the circle: -60 gave x = -c and a channel that formatted as
+    // the string "-ff".
+    const hue = (((h % 360) + 360) % 360);
     const sat = s / 100;
     const light = l / 100;
     const c = (1 - Math.abs(2 * light - 1)) * sat;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
     const m = light - c / 2;
     const [r, g, b] = [
         [c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x],
-    ][Math.floor((((h % 360) + 360) % 360) / 60)];
+    ][Math.floor(hue / 60)];
     return '#' + [r, g, b]
         .map(v => Math.round((v + m) * 255).toString(16).padStart(2, '0'))
         .join('');

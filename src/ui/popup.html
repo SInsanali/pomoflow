@@ -23,6 +23,18 @@
                         <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
                     </svg>
                 </button>
+                <!-- Between the two, because that is the order the three read
+                     in: out of the popup, a look at the numbers, then the knobs. -->
+                <button id="stats-btn" class="icon-btn" title="Stats" aria-label="Stats"
+                        aria-expanded="false" aria-controls="stats-sheet">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18" />
+                        <path d="M8 17v-3" />
+                        <path d="M13 17V5" />
+                        <path d="M18 17V9" />
+                    </svg>
+                </button>
                 <button id="quick-settings-btn" class="icon-btn" title="Quick settings" aria-label="Quick settings"
                         aria-expanded="false" aria-controls="quick-settings">
                     <!-- Same gear as the full page's settings button, so the two
@@ -81,6 +93,87 @@
                     </svg>
                 </button>
             </span>
+        </div>
+    </div>
+
+    <!-- ===== STATS =====
+         A sheet over the timer, exactly like quick settings, for the same
+         reason: the popup cannot grow past Chrome's cap without scrolling the
+         clock out of view. Deliberately three things and no more — what you did
+         today, the shape of the week, and three totals. The full page keeps the
+         long view (17-week heatmap, session log).
+
+         Everything numeric is written by renderStats(); the boxes live here so
+         the sheet has a stable height to be measured at. -->
+    <div class="stats-sheet" id="stats-sheet" hidden>
+        <div class="qs-head">
+            <span class="qs-title">Stats</span>
+            <!-- The same house as quick settings: this does not dismiss
+                 anything, it goes back to the timer. -->
+            <button class="icon-btn qs-home" id="stats-close" title="Back to the timer"
+                    aria-label="Back to the timer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 10.5 12 3l9 7.5" />
+                    <path d="M5.5 9.5V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.5" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="stats-body">
+            <!-- Today, as a goal ring against the session goal. The ring is the
+                 one thing worth reading at a glance, so it gets the top slot and
+                 the biggest number. -->
+            <section class="stats-hero">
+                <div class="stats-ring">
+                    <svg viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="stats-ring-track" cx="50" cy="50" r="42" />
+                        <!-- dasharray is rewritten by renderStats; 0-length here
+                             so an unrendered ring shows empty, never full. -->
+                        <circle class="stats-ring-fill" id="s-ring" cx="50" cy="50" r="42"
+                                stroke-dasharray="0 264" />
+                    </svg>
+                    <span class="stats-ring-count" id="s-ring-count">0/4</span>
+                </div>
+                <div class="stats-hero-text">
+                    <span class="stats-hero-label">Today</span>
+                    <span class="stats-hero-value" id="s-today">0m</span>
+                    <span class="stats-hero-sub" id="s-today-sub">0 of 4 pomodoros</span>
+                </div>
+            </section>
+
+            <section class="stats-block">
+                <div class="stats-block-head">
+                    <span class="qs-label">Last 7 days</span>
+                    <span class="stats-aside" id="s-avg">avg 0m</span>
+                </div>
+                <!-- Both rows are filled by renderStats and share one gap value,
+                     so each initial sits under its own bar. -->
+                <div class="stats-plot" id="s-plot"></div>
+                <div class="stats-days" id="s-days"></div>
+            </section>
+
+            <!-- One tile per theme accent. The three colours are the theme's
+                 whole palette, so the sheet shows what was picked upstairs
+                 rather than repeating a single accent three times. -->
+            <section class="stats-tiles">
+                <div class="stats-tile" data-accent="pomodoro">
+                    <span class="stats-tile-value" id="s-week">0m</span>
+                    <span class="stats-tile-label">This week</span>
+                </div>
+                <div class="stats-tile" data-accent="shortBreak">
+                    <span class="stats-tile-value" id="s-streak">0</span>
+                    <span class="stats-tile-label">Day streak</span>
+                </div>
+                <div class="stats-tile" data-accent="longBreak">
+                    <span class="stats-tile-value" id="s-blocks">0</span>
+                    <span class="stats-tile-label">All-time</span>
+                </div>
+            </section>
+
+            <p class="stats-note" id="s-empty" hidden>
+                Nothing logged yet — finish a pomodoro and it lands here.
+            </p>
         </div>
     </div>
 

@@ -203,6 +203,19 @@ test("a block waiting on the user shows an attention mark", () => {
   assert.equal(badgeText(startTimer(waiting, T0, "id-2"), T0), "25");
 });
 
+test("a waiting block remembers which block ended to put it there", () => {
+  // The toolbar colours the "!" by this, and it is not derivable from the
+  // waiting timer: a waiting pomodoro can follow either kind of break.
+  const idle = idleTimer("pomodoro", settings);
+  assert.equal(idle.endedMode, null, "nothing has ended yet");
+  assert.equal(awaitingTimer(idle, "longBreak").endedMode, "longBreak");
+  assert.equal(awaitingTimer(idle, "shortBreak").endedMode, "shortBreak");
+  // Called without one — no caller does today — it must not carry a stale mode.
+  assert.equal(awaitingTimer(idle).endedMode, null);
+  // The waiting block's own mode is untouched by any of it.
+  assert.equal(awaitingTimer(idle, "longBreak").mode, "pomodoro");
+});
+
 test("blockInProgress ignores a fresh timer but catches a partial one", () => {
   const fresh = idleTimer("pomodoro", settings);
   assert.equal(blockInProgress(fresh, T0), false);

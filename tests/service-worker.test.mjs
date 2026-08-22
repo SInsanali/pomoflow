@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 // that the icon follows the theme, not what shade of violet nebula is this year.
 import { THEMES } from "../src/core/themes.js";
 import { dayStamp } from "../src/core/clock.js";
+import { POMODOROS_PER_CYCLE } from "../src/core/defaults.js";
 
 const T0 = 1_760_000_000_000;
 
@@ -240,6 +241,92 @@ test("a finished break marks the toolbar, because the next block waits on you", 
   } finally {
     Date.now = realNow;
   }
+});
+
+test("the waiting mark is coloured by the block that just ended", async () => {
+  // The "!" names the block you just closed out, NOT the one queued behind it:
+  // finish a break and it wears the break's accent even though a pomodoro is
+  // what waits. It used to paint the waiting block instead, which made every
+  // "!" the focus accent — a finished short break and a finished long break
+  // were indistinguishable, and so was a fresh cycle from a spent one.
+  const { listeners, calls, storage } = await freshWorker();
+  const theme = THEMES.nebula;
+
+  const realNow = Date.now;
+  try {
+    const seen = [];
+    for (let round = 0; round < POMODOROS_PER_CYCLE; round++) {
+      // A pomodoro, then the break that starts itself; the "!" lands when the
+      // break ends and the next pomodoro is left waiting.
+      for (const _ of [0, 1]) {
+        await sendMessage(listeners, { type: "START" });
+        const deadline = storage.timer.endsAt;
+        Date.now = () => deadline + 1_000;
+        await listeners.alarm({ name: "block-end" });
+      }
+      assert.equal(calls.icon.at(-1).text, "!", `round ${round + 1} should be waiting`);
+      assert.equal(storage.timer.mode, "pomodoro", "a pomodoro is what waits");
+      seen.push(calls.icon.at(-1).color);
+    }
+
+    // The first three rounds follow a short break; the fourth pomodoro of a
+    // cycle ends in the long break, so the last mark is the long break's.
+    assert.deepEqual(
+      seen,
+      [theme.shortBreak, theme.shortBreak, theme.shortBreak, theme.longBreak],
+      "each mark wears the accent of the break that ended",
+    );
+    assert.equal(storage.timer.endedMode, "longBreak", "recorded on the timer, not recomputed");
+
+    // A wake-up repaints from storage and nothing else, so the colour has to
+    // survive being written down — this is the path a restarted worker takes.
+    await listeners.alarm({ name: "badge-refresh" });
+    assert.equal(calls.icon.at(-1).text, "!");
+    assert.equal(calls.icon.at(-1).color, theme.longBreak, "repainted from the stored timer");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("a finished pomodoro marks in the focus accent when breaks are manual", async () => {
+  // The other half of the rule, and the only way to see it: with autoStartBreaks
+  // on, a break never waits, so this "!" is unreachable on default settings.
+  const { listeners, calls, storage } = await freshWorker();
+  storage.settings = { autoStartBreaks: false };
+  const theme = THEMES.nebula;
+
+  const realNow = Date.now;
+  try {
+    await sendMessage(listeners, { type: "START" });
+    const deadline = storage.timer.endsAt;
+    Date.now = () => deadline + 1_000;
+    await listeners.alarm({ name: "block-end" });
+
+    assert.equal(calls.icon.at(-1).text, "!");
+    assert.equal(storage.timer.mode, "shortBreak", "the break is what waits");
+    assert.equal(storage.timer.endedMode, "pomodoro");
+    assert.equal(
+      calls.icon.at(-1).color, theme.pomodoro,
+      "the pomodoro that ended, not the break that waits",
+    );
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("a timer stored without endedMode still paints", async () => {
+  // Whatever is in chrome.storage when this version first wakes was written by
+  // the previous one, which had no endedMode: the "!" must fall back to the
+  // timer's own mode rather than painting undefined.
+  const { listeners, calls, storage } = await freshWorker();
+  storage.timer = {
+    mode: "shortBreak", blockId: null, plannedSeconds: 300, startedAt: null,
+    endsAt: null, remainingMs: 300_000, isRunning: false, awaitingStart: true,
+  };
+
+  await listeners.alarm({ name: "badge-refresh" });
+  assert.equal(calls.icon.at(-1).text, "!");
+  assert.equal(calls.icon.at(-1).color, THEMES.nebula.shortBreak, "falls back to its own mode");
 });
 
 test("two alarms racing on the same expired block do not double-log it", async () => {

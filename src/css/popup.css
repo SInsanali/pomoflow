@@ -771,3 +771,271 @@ body.popup {
     color: var(--bg-primary);
     filter: brightness(1.08);
 }
+
+/* ===== Stats =====
+   The second sheet over the timer, sharing quick settings' box: same absolute
+   positioning, same content-sized height, same accent tint. Only the contents
+   below are new. See .quick-settings for why the bottom is left free and why
+   nothing in here is a scroll container.
+
+   Everything that plots focus time is drawn in --pomodoro-accent rather than
+   --accent. --accent follows the *current mode*, so during a break the focus
+   bars would turn into the break colour and claim to be something they are not;
+   the focus colour is what focus time means in this theme. The sheet's chrome
+   (title, tint) still follows --accent, so picking a theme behind the sheet
+   previews itself the way it does in quick settings. */
+.stats-sheet {
+    position: absolute;
+    inset: 0 0 auto;
+    min-height: 100%;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    /* Pinned for the same reason as the sheet next door: this box gets measured
+       to size the popup, and a line-height of `normal` makes every row a
+       function of the loaded face rather than of font-size alone. */
+    line-height: 1.25;
+    background: color-mix(in srgb, var(--accent) 14%,
+                 color-mix(in srgb, var(--bg-primary) 88%, transparent));
+    backdrop-filter: blur(14px);
+    animation: qs-in 0.16s ease-out;
+}
+
+.stats-sheet[hidden] {
+    display: none;
+}
+
+.stats-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1 1 auto;
+}
+
+/* ----- Today's ring ----- */
+.stats-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stats-ring {
+    position: relative;
+    flex: 0 0 auto;
+    width: 84px;
+    height: 84px;
+    display: grid;
+    place-items: center;
+}
+
+.stats-ring svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* Start the arc at 12 o'clock instead of 3, the way every progress ring
+       people already know does. */
+    transform: rotate(-90deg);
+}
+
+.stats-ring-track,
+.stats-ring-fill {
+    fill: none;
+    stroke-width: 9;
+}
+
+.stats-ring-track {
+    stroke: color-mix(in srgb, var(--pomodoro-accent) 18%, transparent);
+}
+
+.stats-ring-fill {
+    stroke: var(--pomodoro-accent);
+    /* Rounded ends, and the whole reason the arc is one dash rather than a
+       dashoffset: a round cap on a dashed stroke would cap every gap too. */
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease;
+}
+
+/* Sits inside the ring, so the count and the arc read as one object. */
+.stats-ring-count {
+    position: relative;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.stats-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.stats-hero-label {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+/* The one number the sheet exists to show, so it is the only one at this size. */
+.stats-hero-value {
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.05;
+    color: var(--pomodoro-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+.stats-hero-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+/* ----- Week strip ----- */
+.stats-block {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.stats-block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.stats-aside {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Full-height pill tracks with the day's bar rising inside each one — the empty
+   part of the track is what makes a light day legible as a light day rather
+   than as a missing bar. Fixed height so the sheet's measured height does not
+   move with the data. */
+.stats-plot {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    height: 92px;
+}
+
+.stats-track {
+    position: relative;
+    flex: 1 1 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--pomodoro-accent) 13%, transparent);
+}
+
+/* Its own capsule inside the track rather than a rounded-top bar clipped by it.
+   The clipped version depends on where a 999px corner lands on a 3px bar, which
+   is the kind of thing that can only be settled in a browser — and the shortest
+   bar, the one MIN_BAR_PERCENT exists to keep visible, is exactly the one the
+   corner would have eaten. A capsule is never taller than its track, so there is
+   nothing to clip and nothing to get wrong. */
+.stats-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: var(--pomodoro-accent);
+    /* Past days step back so today reads as today without a second colour. */
+    opacity: 0.62;
+    transition: height 0.45s ease, opacity 0.25s ease;
+}
+
+.stats-track.today .stats-bar {
+    opacity: 1;
+}
+
+/* The period average, Fitness-style: a hairline across the plot, so every bar is
+   readable as above or below it without an axis or gridlines. renderStats leaves
+   it off entirely for an empty week, since an average of zero sitting on the
+   baseline is just a second baseline. */
+.stats-mean {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px dashed color-mix(in srgb, var(--pomodoro-accent) 55%, transparent);
+    pointer-events: none;
+}
+
+.stats-days {
+    display: flex;
+    /* Same gap as .stats-plot, and each cell the same flex basis, so an initial
+       lands under its own bar. */
+    gap: 6px;
+    font-size: 0.63rem;
+    color: var(--text-tertiary);
+}
+
+.stats-days span {
+    flex: 1 1 0;
+    text-align: center;
+}
+
+.stats-days span.today {
+    color: var(--pomodoro-accent);
+    font-weight: 600;
+}
+
+/* ----- Totals ----- */
+.stats-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+.stats-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-glass);
+    text-align: center;
+}
+
+/* One accent per tile — the theme's three colours, in the theme's own order. */
+.stats-tile[data-accent="pomodoro"] .stats-tile-value { color: var(--pomodoro-accent); }
+.stats-tile[data-accent="shortBreak"] .stats-tile-value { color: var(--short-break-accent); }
+.stats-tile[data-accent="longBreak"] .stats-tile-value { color: var(--long-break-accent); }
+
+.stats-tile-value {
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+    /* Never wrap "1h 20m" onto two lines — it would grow the tile row and the
+       sheet under it. */
+    white-space: nowrap;
+}
+
+.stats-tile-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+.stats-note {
+    font-size: 0.7rem;
+    line-height: 1.4;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+.stats-note[hidden] {
+    display: none;
+}
