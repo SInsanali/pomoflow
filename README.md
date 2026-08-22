@@ -22,9 +22,9 @@ The **popup** is the everyday surface: mode tabs, the clock, start / reset /
 skip, the cycle dots, and a gear for quick settings — themes, timer font,
 durations, chime, auto-start, notifications.
 
-The **full page** (open-in-new-tab, or `Alt+Shift+O`) adds the big clock, the
-dashboard, every setting, and a chromeless **pop-out** window to park on a
-second monitor.
+The **full page** (open-in-new-tab, or `Alt+Shift+O` / `⌥⇧O`) adds the big
+clock, the dashboard, every setting, and a chromeless **pop-out** window to
+park on a second monitor.
 
 While a block runs, the toolbar icon is the whole minutes remaining, drawn in
 the current mode's accent colour; the tooltip shows `MM:SS`. When a block ends
@@ -34,14 +34,19 @@ popup is closed by definition.
 
 Global hotkeys, rebindable at `chrome://extensions/shortcuts`:
 
-| Shortcut | Action |
-|---|---|
-| `Alt+Shift+P` | Start / pause |
-| `Alt+Shift+R` | Reset the block |
-| `Alt+Shift+N` | Skip to the next block |
-| `Alt+Shift+O` | Open the full page |
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| Start / pause | `Alt+Shift+P` | `⌥⇧P` |
+| Reset the block | `Alt+Shift+R` | `⌥⇧R` |
+| Skip to the next block | `Alt+Shift+N` | `⌥⇧N` |
+| Open the full page | `Alt+Shift+O` | `⌥⇧O` |
 
-With the popup or full page focused, `Space`, `R` and `N` work too.
+These are one binding, not two: the manifest declares `Alt`, and Chrome hands
+that to the Option (`⌥`) key on macOS. Nothing to install differently — the
+two columns are the same shortcut under the name your keyboard prints on it.
+
+With the popup or full page focused, `Space`, `R` and `N` work on every
+platform.
 
 ## Features
 
