@@ -100,6 +100,47 @@ function drawOne(text, color, size) {
     return ctx.getImageData(0, 0, size, size);
 }
 
+// The packaged mark, rasterised to imageData rather than handed to Chrome as a
+// path.
+//
+// chrome.action.setIcon({path}) makes Chrome fetch the file itself, and in an
+// MV3 service worker that fetch fails: "Failed to set icon 'src/icons/16.png':
+// Failed to fetch". The rejection is swallowed by the caller's catch, so the
+// toolbar silently keeps whatever was drawn last — a finished block's "!" or a
+// stale minute count that no later paint can clear, because every attempt takes
+// the same failing route.
+//
+// Fetching the PNG ourselves and handing over pixels sidesteps it entirely, and
+// puts the at-rest icon on the same imageData path as the digits, which never
+// had the problem.
+//
+// Cached because the bytes never change; the cache dies with the worker, which
+// is the right lifetime for it.
+let markCache = null;
+
+export async function markIcon() {
+    if (markCache) return markCache;
+    if (!canDrawIcon() || typeof createImageBitmap !== 'function' ||
+        typeof fetch !== 'function') return null;
+    try {
+        const imageData = {};
+        for (const size of SIZES) {
+            const url = chrome.runtime.getURL(`src/icons/${size}.png`);
+            const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+            const canvas = new OffscreenCanvas(size, size);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, size, size);
+            ctx.drawImage(bitmap, 0, 0, size, size);
+            imageData[size] = ctx.getImageData(0, 0, size, size);
+        }
+        markCache = imageData;
+        return imageData;
+    } catch (e) {
+        // Falls back to the path form, which is no worse than before.
+        return null;
+    }
+}
+
 // An imageData map for chrome.action.setIcon, or null where this runtime cannot
 // rasterise (node's test runner has no OffscreenCanvas) — callers fall back to
 // the static icon and the badge.

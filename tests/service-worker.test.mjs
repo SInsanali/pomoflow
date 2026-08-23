@@ -64,6 +64,8 @@ class FakeOffscreenCanvas {
       // the theme.
       strokeText() {},
       fillText(text) { canvas.drawn = { text, color: this.fillStyle }; },
+      // markIcon() blits the packaged PNG instead of drawing glyphs.
+      drawImage(bitmap) { canvas.drawn = { mark: bitmap.src }; },
       getImageData() { return { ...canvas.drawn, size: canvas.width }; },
     };
   }
@@ -682,5 +684,42 @@ test("a completion replaces the last toast instead of stacking another", async (
     assert.ok(calls.notifications.length > 1, "several were actually sent");
   } finally {
     Date.now = realNow;
+  }
+});
+
+// The bug that outlived two attempts at the "!" and one at the badge: Chrome
+// rejects setIcon({path}) inside an MV3 service worker with "Failed to fetch".
+// paintAction catches it, so the toolbar silently keeps the last bitmap that
+// DID land — a spent "!" or a stale minute count — and no later repaint can
+// clear it, because every one of them takes the same failing route.
+//
+// The fake used to make path-setting infallible, which is precisely why the
+// harness kept passing while the extension was broken in the browser.
+test("the at-rest mark is drawn from pixels, not fetched by Chrome", async () => {
+  const { listeners, calls, storage } = await freshWorker();
+
+  const realFetch = globalThis.fetch;
+  const realBitmap = globalThis.createImageBitmap;
+  const realSetIcon = chrome.action.setIcon;
+  globalThis.fetch = async (url) => ({ blob: async () => ({ url }) });
+  globalThis.createImageBitmap = async (blob) => ({ src: blob.url });
+  // Real Chrome behaviour: handing over a path fails, handing over pixels works.
+  chrome.action.setIcon = async (arg) => {
+    if (arg.path) throw new Error("Failed to set icon 'src/icons/16.png': Failed to fetch");
+    calls.icon.push(arg.imageData[16]);
+  };
+
+  try {
+    await sendMessage(listeners, { type: "START" });   // running: digits
+    await sendMessage(listeners, { type: "PAUSE" });   // at rest: the mark
+
+    const painted = calls.icon.at(-1);
+    assert.ok(painted.mark, "the mark reached the toolbar as pixels");
+    assert.match(painted.mark, /16\.png$/, "rasterised from the packaged icon");
+    assert.equal(storage.timer.isRunning, false);
+  } finally {
+    globalThis.fetch = realFetch;
+    globalThis.createImageBitmap = realBitmap;
+    chrome.action.setIcon = realSetIcon;
   }
 });

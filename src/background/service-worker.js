@@ -16,7 +16,7 @@ import {
 import { durationSeconds, MODE_LABELS } from '../core/defaults.js';
 import { resolveTheme } from '../core/themes.js';
 import { store } from '../store/storage.js';
-import { timerIcon } from './icon.js';
+import { timerIcon, markIcon } from './icon.js';
 
 const ALARM_BLOCK_END = 'block-end';
 const ALARM_BADGE = 'badge-refresh';
@@ -65,6 +65,17 @@ async function paintAction(text, color) {
             await chrome.action.setIcon({ imageData: icon });
             await chrome.action.setBadgeText({ text: '' });
         } else {
+            // At rest, draw the packaged mark from pixels too. Handing Chrome a
+            // path makes IT fetch the file, and that fetch fails inside an MV3
+            // service worker — the rejection lands in the catch below and the
+            // toolbar keeps the last thing successfully drawn, which is how a
+            // spent "!" or a stale minute count survives every later repaint.
+            const mark = text ? null : await markIcon();
+            if (mark) {
+                await chrome.action.setIcon({ imageData: mark });
+                await chrome.action.setBadgeText({ text: '' });
+                return;
+            }
             await chrome.action.setIcon({ path: DEFAULT_ICON });
             await chrome.action.setBadgeText({ text });
             if (text) {
