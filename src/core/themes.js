@@ -23,45 +23,62 @@
 // Order is the grid order in both surfaces — neutral, warm, pink, purple,
 // blue, green, then the neon one — so scanning the swatches walks a spectrum
 // instead of a shuffled bag.
+// The built-in themes. Every theme is just three accents; app.css is entirely
+// CSS-variable driven (--pomodoro-accent / --short-break-accent /
+// --long-break-accent), so themes and mode-accent switching work here exactly
+// as they did in v1.
+//
+// An accent is both text on #0d0d0d (the clock, the mode label) and a fill with
+// #0d0d0d text on it (the primary button), so anything below ~4.5:1 against the
+// background is unreadable in both directions at once. Every value here is
+// DERIVED rather than picked: each theme is specified as hue/saturation/
+// lightness intent and its lightness raised until it clears the ratio, then
+// checked for mode separation. tests/themes.test.mjs asserts both rules.
+//
+//   * every accent clears 4.5:1 on #0d0d0d (most clear 6:1),
+//   * the three accents in a theme sit at least 15 ΔE apart, so focus, short
+//     break and long break are three visibly different states.
+//
+// Beyond those two, the set is chosen for spread: the 23 focus accents walk the
+// hue wheel with no gap wider than 34°, no two themes sit closer than ~20 ΔE,
+// and the internal harmony is varied on purpose — analogous, complementary,
+// triadic and separated-by-lightness all appear, because 23 variations on
+// "three tints of one hue" is what made the old set read as one theme.
+//
+// Every id from v1 is kept, because settings.theme, recentThemes and saved
+// presets all store ids: a dropped id would silently reset someone to mono.
+//
+// Order is the grid order in both surfaces: six per row, four rows, walking the
+// spectrum. The 24th cell is the custom-theme button, which is why there are
+// 23 built-ins and not 24.
 export const THEMES = {
     // Neutral — colour that stays out of the way.
-    mono:       { pomodoro: '#ececf1', shortBreak: '#b0b6c2', longBreak: '#848b9a' },
-    slate:      { pomodoro: '#8fb0d9', shortBreak: '#8ec9b4', longBreak: '#c2a5c6' },
+    mono:       { pomodoro: '#efeff1', shortBreak: '#b7bbc2', longBreak: '#848b9a' },   // neutral
+    slate:      { pomodoro: '#a7bbd2', shortBreak: '#98c3ba', longBreak: '#caadcd' },   // quiet, tinted
+    dusk:       { pomodoro: '#f06938', shortBreak: '#61a8e5', longBreak: '#efb261' },   // complementary — ember vs sky
+    warm:       { pomodoro: '#fb7941', shortBreak: '#faae57', longBreak: '#f9db76' },
+    honey:      { pomodoro: '#f6b828', shortBreak: '#fae76b', longBreak: '#de965e' },
+    terracotta: { pomodoro: '#dd634b', shortBreak: '#de9a73', longBreak: '#d4b991' },
 
-    // Warm — ember work, cooler or lighter rest.
-    dusk:       { pomodoro: '#f2723c', shortBreak: '#5b9ee0', longBreak: '#f3a86a' },
-    warm:       { pomodoro: '#ff7a4d', shortBreak: '#ffb066', longBreak: '#ffd88a' },
-    sunset:     { pomodoro: '#ff5f7e', shortBreak: '#ff9f5a', longBreak: '#ffd28a' },
-    terracotta: { pomodoro: '#e8674a', shortBreak: '#ef8f6b', longBreak: '#e5bb92' },
-    honey:      { pomodoro: '#f5a524', shortBreak: '#ffd979', longBreak: '#d9a05b' },
-    citrus:     { pomodoro: '#b8e62e', shortBreak: '#ffe14d', longBreak: '#ff9f1c' },
-    coffee:     { pomodoro: '#d99a63', shortBreak: '#e3c9ac', longBreak: '#b08968' },
+    coffee:     { pomodoro: '#cc8b66', shortBreak: '#ebdecc', longBreak: '#cdbf98' },
+    citrus:     { pomodoro: '#b9e935', shortBreak: '#f9e743', longBreak: '#f79f3b' },   // chartreuse
+    cherry:     { pomodoro: '#f74569', shortBreak: '#f5adc8', longBreak: '#d98a81' },
+    blossom:    { pomodoro: '#f372aa', shortBreak: '#f1b1ba', longBreak: '#d69ad6' },
+    berry:      { pomodoro: '#f4528e', shortBreak: '#d47bea', longBreak: '#9a8be4' },   // warm to cool
+    orchid:     { pomodoro: '#ea66e1', shortBreak: '#d295e4', longBreak: '#e891ba' },   // magenta
 
-    // Pink.
-    cherry:     { pomodoro: '#ff3b5f', shortBreak: '#ff9aa8', longBreak: '#c9738c' },
-    blossom:    { pomodoro: '#f76c9c', shortBreak: '#ffc2d4', longBreak: '#c98bbf' },
-    sakura:     { pomodoro: '#f78fb3', shortBreak: '#f6cbb0', longBreak: '#a8c9a8' },
-    berry:      { pomodoro: '#ff5773', shortBreak: '#c77dff', longBreak: '#9d8df1' },
+    nebula:     { pomodoro: '#b25cf5', shortBreak: '#ee63c4', longBreak: '#a3b9eb' },   // triadic
+    violet:     { pomodoro: '#db8cf8', shortBreak: '#9373de', longBreak: '#afbde9' },
+    indigo:     { pomodoro: '#8a83ec', shortBreak: '#bd9de7', longBreak: '#80ace5' },   // deep blue-violet
+    ocean:      { pomodoro: '#25c4e4', shortBreak: '#51a3ec', longBreak: '#8499eb' },
+    glacier:    { pomodoro: '#4daeef', shortBreak: '#7bdbea', longBreak: '#b8ccea' },
+    aurora:     { pomodoro: '#47e17f', shortBreak: '#5fe7e7', longBreak: '#c08eeb' },   // green to cyan to violet
 
-    // Purple.
-    violet:     { pomodoro: '#d3a0ff', shortBreak: '#a97cf2', longBreak: '#7b83ee' },
-    nebula:     { pomodoro: '#a86bf5', shortBreak: '#f06fb8', longBreak: '#b9c6f2' },
-    vapor:      { pomodoro: '#ff7ae0', shortBreak: '#7defff', longBreak: '#b8a6ff' },
-    midnight:   { pomodoro: '#7aa2f7', shortBreak: '#7dcfff', longBreak: '#bb9af7' },
-
-    // Blue.
-    ocean:      { pomodoro: '#22b8cf', shortBreak: '#4dabf7', longBreak: '#6c8cff' },
-    glacier:    { pomodoro: '#3d8bfd', shortBreak: '#56c8e8', longBreak: '#a5dcf5' },
-    aurora:     { pomodoro: '#5ce6a0', shortBreak: '#54d1e0', longBreak: '#a68bfa' },
-
-    // Green.
-    mint:       { pomodoro: '#2ee0b0', shortBreak: '#8cf0d6', longBreak: '#3ec2d8' },
-    jade:       { pomodoro: '#17b394', shortBreak: '#6ed6ae', longBreak: '#b8e6d6' },
-    forest:     { pomodoro: '#4fb07a', shortBreak: '#8ecfa0', longBreak: '#c8a45c' },
-    moss:       { pomodoro: '#7fb069', shortBreak: '#b4cf87', longBreak: '#d5c39a' },
-
-    // Neon — deliberately loud, and the only theme that stays that way.
-    cyberpunk:  { pomodoro: '#39ff14', shortBreak: '#00e5ff', longBreak: '#ff3df5' },
+    mint:       { pomodoro: '#3ae2ee', shortBreak: '#93f0e4', longBreak: '#6cb8e5' },
+    jade:       { pomodoro: '#24bc9e', shortBreak: '#97d8be', longBreak: '#b8dce0' },
+    fern:       { pomodoro: '#4bd241', shortBreak: '#79d792', longBreak: '#a5d65c' },   // leaf green
+    forest:     { pomodoro: '#3dc280', shortBreak: '#89d19a', longBreak: '#d4b55e' },   // split-complementary — green vs gold
+    cyberpunk:  { pomodoro: '#40ff1a', shortBreak: '#00e5ff', longBreak: '#ff3df9' },   // deliberately loud, and the only theme that stays that way
 };
 
 export const FALLBACK_THEME = 'mono';

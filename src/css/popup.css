@@ -305,13 +305,15 @@ body.popup {
     color: var(--text-tertiary);
 }
 
-/* Recent themes, as three-stripe chips. */
-/* Every theme, not four — so this wraps into a grid instead of stretching a
-   single row. Fixed track width keeps the columns aligned as the custom themes
-   change the count. */
+/* Every theme, as three-stripe chips. */
+/* Six fixed columns rather than auto-fill: there are 23 built-ins and the "+"
+   renders last, so a six-wide grid lands them in exactly four rows with the
+   custom-theme button in the final cell. Auto-fill would re-flow that on any
+   width change and strand the "+" alone on a fifth row. Custom themes push it
+   onward a cell at a time, which is the one case where a fifth row is honest. */
 .qs-themes {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 6px;
 }
 
