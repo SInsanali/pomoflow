@@ -431,6 +431,27 @@ test("changing durations while idle resizes the current block", async () => {
   assert.equal(storage.timer.isRunning, false);
 });
 
+// Storing the new duration is only half the job: the toolbar is a separate
+// surface that Chrome keeps painted until something repaints it. A block that
+// ran leaves its minutes drawn as the icon, and going idle has to take them
+// back down — otherwise the toolbar sits there advertising the OLD duration
+// while the popup shows the new one, with no event left to correct it.
+test("a duration change while idle takes the old minutes off the toolbar", async () => {
+  const { listeners, storage, calls } = await freshWorker();
+
+  await sendMessage(listeners, { type: "START" });
+  assert.equal(calls.icon.at(-1).text, "25", "the running block draws its minutes");
+
+  await sendMessage(listeners, { type: "RESET" });
+  await chrome.storage.local.set({ settings: { pomodoroDuration: 30 } });
+  await sendMessage(listeners, { type: "SETTINGS_CHANGED" });
+
+  assert.equal(storage.timer.remainingMs, 1_800_000, "the block is resized");
+  assert.equal(calls.icon.at(-1).text, null, "and the static mark is back");
+  assert.ok(calls.icon.at(-1).path, "painted from the packaged icon, not a bitmap");
+  assert.equal(calls.badge.at(-1), "", "with no stale number in the badge either");
+});
+
 test("GET_STATE settles a block that expired while everything was closed", async () => {
   // Quitting Chrome mid-block and reopening: the popup asks for state, and the
   // expired block must be resolved on that read rather than resurrected.
