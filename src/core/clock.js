@@ -35,7 +35,7 @@ export function formatTime(totalSeconds) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// What the toolbar shows when a finished block is waiting on a decision.
+// What the toolbar shows when a finished block has not been seen yet.
 export const ATTENTION = '!';
 
 // Toolbar text. Minutes only — a deliberate consequence of the 30s
@@ -48,9 +48,11 @@ export const ATTENTION = '!';
 // last one — a stray sign in an icon that is otherwise pure digits.
 export function badgeText(timer, nowMs) {
     if (!timer) return '';
-    // A block that ENDED and left the next one needing a decision, and only
-    // that: a manual reset or mode switch is idle, not waiting.
-    if (!timer.isRunning) return timer.awaitingStart ? ATTENTION : '';
+    // A block that ENDED and has not been acknowledged, and only that: a manual
+    // reset or mode switch is idle, not waiting. Keyed off `attention` rather
+    // than `awaitingStart` because the "!" is an alert, not a status — it is
+    // spent once seen, while the block stays unstarted until acted on.
+    if (!timer.isRunning) return timer.attention ? ATTENTION : '';
     const seconds = remainingSeconds(timer, nowMs);
     if (seconds <= 0) return '';
     return String(Math.ceil(seconds / 60));
@@ -124,11 +126,24 @@ export function idleTimer(mode, settings) {
         isRunning: false,
         awaitingStart: false,
         endedMode: null,
+        attention: false,
     };
 }
 
-// Flag an idle block as waiting on the user — the toolbar turns into "!" and
-// stays there until they act. Set only by block completion; see badgeText.
+// Flag an idle block as waiting on the user. Set only by block completion; see
+// badgeText.
+//
+// THREE facts live here, with three different lifetimes:
+//
+// `awaitingStart` is a status: this block was queued by a completion and has
+// not been started, and it stays true until the user acts on it. The tooltip
+// reads from it, so a dismissed "!" still says "ready to start" rather than
+// calling an unstarted block "paused".
+//
+// `attention` is an alert: the completion has not been SEEN. It is spent the
+// moment a surface shows the user where they are, which is what puts the plain
+// Pomoflow mark back on the toolbar. Collapsing it into `awaitingStart` forces
+// a choice between a "!" that outlives being seen and a lying tooltip.
 //
 // `endedMode` is the mode of the block whose completion put us here, which is
 // NOT this timer's own mode: finishing a pomodoro leaves a break waiting. The
@@ -138,7 +153,14 @@ export function idleTimer(mode, settings) {
 // persisted across a service-worker restart; a repaint on wake has no other way
 // back to the block that ended.
 export function awaitingTimer(timer, endedMode = null) {
-    return { ...timer, awaitingStart: true, endedMode };
+    return { ...timer, awaitingStart: true, attention: true, endedMode };
+}
+
+// The user has seen it. Spends the alert and leaves the status alone, so the
+// toolbar goes back to the Pomoflow mark while the tooltip still says the block
+// is ready to start.
+export function acknowledgeTimer(timer) {
+    return { ...timer, attention: false };
 }
 
 // Start (or resume) a block.
@@ -164,7 +186,9 @@ export function startTimer(timer, nowMs, newBlockId) {
         endsAt: nowMs + remainingMs,
         remainingMs,
         isRunning: true,
-        awaitingStart: false,   // acting on it is what clears the "!"
+        // Acting on it settles both: nothing is queued and nothing is unseen.
+        awaitingStart: false,
+        attention: false,
     };
 }
 

@@ -82,9 +82,50 @@ second-by-second countdown, use the pop-out window.
 ### End-of-block `!`
 
 When a block ends and the next one is not set to auto-start, the icon becomes a
-**`!`** and stays there until you act. A desktop notification is easy to miss,
-and the popup is closed by definition. Paused or merely idle, the static
-Pomoflow mark comes back.
+**`!`**. A desktop notification is easy to miss, and the popup is closed by
+definition, so the toolbar carries the news.
+
+It is an **alert, not a status**: it lasts until it has been seen, then the
+static Pomoflow mark comes back — the same thing the toolbar shows for any other
+block that is not running. Opening the popup, the full page, or a pop-out is what
+counts as seeing it, as is clicking the desktop notification.
+
+Which surfaces can be open *without* being seen is the subtlety, and it is not
+uniform:
+
+- The **popup** is never gated. It exists only as a direct result of clicking the
+  toolbar icon and Chrome destroys it the moment focus moves, so it cannot be
+  open-but-unseen. Gating it on `document.visibilityState` anyway is a live trap:
+  a popup document does not reliably report `'visible'` by the time the first
+  state lands, so the icon click — the most obvious acknowledgment there is —
+  silently failed to dismiss anything.
+- The **full page** and the **pop-out** are gated, because they genuinely can be
+  buried; the pop-out is *built* to be parked on a second monitor. They re-check
+  on `visibilitychange` and `focus`, so a window raised an hour later
+  acknowledges then. The test is "not `hidden`", so an unexpected value errs
+  towards dismissing rather than towards nagging.
+
+That is two facts with two different lifetimes, so the timer stores two flags:
+
+- **`awaitingStart`** — this block was queued by a completion and has not been
+  started. Survives acknowledgment, and is what the tooltip reads, so a
+  dismissed `!` still leaves *"Study 2 — ready to start"* on hover.
+- **`attention`** — the completion has not been seen yet. The **only** thing that
+  draws the `!`.
+
+Collapsing them into one flag forces a choice between a `!` that outlives being
+seen and a tooltip that calls an unstarted block "paused". Starting, resetting,
+skipping or switching mode clears both, as before.
+
+The toolbar's whole vocabulary is therefore three signs, and deliberately no
+more: **digits** = running, **`!`** = needs you, **the mark** = at rest. Drawing
+the next block's minutes while it waits was the tempting fourth, and it is the
+one thing that cannot be added — it is indistinguishable from a *running* block,
+which would stop the icon answering the only question it exists to answer.
+
+All block-end notifications share one id (`pomoflow-block-end`), so a completion
+replaces the last notice instead of stacking another entry in the notification
+centre, and one acknowledgment clears both channels.
 
 Its **colour names the block that just ended** — not the one queued behind it.
 Finish a short break and the `!` wears the short break's accent even though a

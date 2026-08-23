@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import {
   remaining, remainingSeconds, formatTime, badgeText,
   reconcile, idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
+  acknowledgeTimer,
   advanceCycle, shouldAutoStart, blockInProgress, elapsedSeconds, sessionLabel,
   dayStamp, rolloverCycle, resetCycle,
 } from "../src/core/clock.js";
@@ -214,6 +215,23 @@ test("a waiting block remembers which block ended to put it there", () => {
   assert.equal(awaitingTimer(idle).endedMode, null);
   // The waiting block's own mode is untouched by any of it.
   assert.equal(awaitingTimer(idle, "longBreak").mode, "pomodoro");
+});
+
+test("acknowledging spends the mark but leaves the block waiting", () => {
+  const waiting = awaitingTimer(idleTimer("pomodoro", settings));
+  const seen = acknowledgeTimer(waiting);
+
+  assert.equal(badgeText(seen, T0), "", "the static mark comes back once seen");
+  assert.equal(seen.awaitingStart, true, "the block is still queued, not paused");
+  assert.equal(seen.remainingMs, waiting.remainingMs, "and still whole");
+
+  // Idempotent, because every surface calls it on open and on focus.
+  assert.deepEqual(acknowledgeTimer(seen), seen);
+
+  // An old stored timer has no `attention` field at all; undefined must read as
+  // "nothing to show" rather than throwing or printing a "!".
+  const { attention, ...legacy } = waiting;
+  assert.equal(badgeText(legacy, T0), "");
 });
 
 test("blockInProgress ignores a fresh timer but catches a partial one", () => {

@@ -26,7 +26,10 @@ const T0 = 1_760_000_000_000;
 // which is also closer to reality: one worker, many wake-ups.
 const storage = {};
 const listeners = {};
-const calls = { badge: [], icon: [], titles: [], notifications: [], alarms: [], cleared: [], offscreen: [] };
+const calls = {
+  badge: [], icon: [], titles: [], notifications: [], dismissed: [],
+  alarms: [], cleared: [], offscreen: [],
+};
 
 // The worker draws the minutes remaining straight onto the toolbar icon, so the
 // fake has to be able to rasterise. This one records what was drawn instead of
@@ -95,8 +98,8 @@ function installFakeChrome() {
       setTitle: async ({ title }) => { calls.titles.push(title); },
     },
     notifications: {
-      create: async (id, opts) => { calls.notifications.push(opts); },
-      clear: async () => {},
+      create: async (id, opts) => { calls.notifications.push({ id, ...opts }); },
+      clear: async (id) => { calls.dismissed.push(id); },
       onClicked: { addListener() {} },
     },
     runtime: {
@@ -237,6 +240,7 @@ test("a finished break marks the toolbar, because the next block waits on you", 
     // Starting it is what clears the mark.
     await sendMessage(listeners, { type: "START" });
     assert.equal(storage.timer.awaitingStart, false);
+    assert.equal(storage.timer.attention, false);
     assert.equal(calls.icon.at(-1).text, "25");
   } finally {
     Date.now = realNow;
@@ -319,9 +323,14 @@ test("a timer stored without endedMode still paints", async () => {
   // the previous one, which had no endedMode: the "!" must fall back to the
   // timer's own mode rather than painting undefined.
   const { listeners, calls, storage } = await freshWorker();
+  // `attention` is spelled out because this fixture is about a missing
+  // endedMode, not a missing alert: a stored timer with no `attention` at all
+  // is deliberately treated as nothing-to-show (see badgeText), so leaving it
+  // off here would test the wrong absence.
   storage.timer = {
     mode: "shortBreak", blockId: null, plannedSeconds: 300, startedAt: null,
     endsAt: null, remainingMs: 300_000, isRunning: false, awaitingStart: true,
+    attention: true,
   };
 
   await listeners.alarm({ name: "badge-refresh" });
@@ -585,6 +594,92 @@ test("sound failure never blocks block completion", async () => {
     await listeners.alarm({ name: "block-end" });
     assert.equal(storage.sessions.length, 1, "block still completed");
     assert.equal(storage.timer.mode, "shortBreak", "cycle still advanced");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+// Run a full pomodoro and the break it auto-starts, leaving the next pomodoro
+// sitting there unacknowledged. That is the only state the "!" appears in.
+async function runToAwaitingPomodoro(listeners, storage) {
+  await sendMessage(listeners, { type: "START" });
+  for (let i = 0; i < 2; i++) {
+    const deadline = storage.timer.endsAt;
+    Date.now = () => deadline + 1_000;
+    await listeners.alarm({ name: "block-end" });
+  }
+  assert.equal(storage.timer.attention, true, "the block is waiting to be seen");
+}
+
+test("acknowledging the '!' restores the Pomoflow mark without starting anything", async () => {
+  const { listeners, calls, storage } = await freshWorker();
+  const realNow = Date.now;
+  try {
+    await runToAwaitingPomodoro(listeners, storage);
+    assert.equal(calls.icon.at(-1).text, "!");
+
+    await sendMessage(listeners, { type: "ACKNOWLEDGE" });
+
+    // The whole point: the alert is spent, the block is not.
+    assert.equal(calls.icon.at(-1).text, null, "the static mark comes back");
+    assert.equal(calls.badge.at(-1), "", "and no badge pill in its place");
+    assert.equal(storage.timer.attention, false);
+    assert.equal(storage.timer.awaitingStart, true, "still queued, not started");
+    assert.equal(storage.timer.isRunning, false);
+    assert.equal(storage.timer.remainingMs, 1_500_000, "a whole block is still waiting");
+
+    // The tooltip is now the only surface still carrying the distinction, so it
+    // must not start calling an unstarted block "paused".
+    assert.match(calls.titles.at(-1), /ready to start/);
+
+    // One dismissal covers both channels.
+    assert.ok(calls.dismissed.includes("pomoflow-block-end"), "the toast is cleared too");
+
+    // Starting it from here still behaves.
+    await sendMessage(listeners, { type: "START" });
+    assert.equal(storage.timer.isRunning, true);
+    assert.equal(calls.icon.at(-1).text, "25");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("acknowledging twice writes nothing the second time", async () => {
+  // Every surface acknowledges on open AND on regaining focus, so this is the
+  // common case, not an edge one: a needless commit here would wake every other
+  // open surface through storage.onChanged.
+  const { listeners, calls, storage } = await freshWorker();
+  const realNow = Date.now;
+  try {
+    await runToAwaitingPomodoro(listeners, storage);
+    await sendMessage(listeners, { type: "ACKNOWLEDGE" });
+
+    const paints = calls.icon.length;
+    const titles = calls.titles.length;
+    await sendMessage(listeners, { type: "ACKNOWLEDGE" });
+    await sendMessage(listeners, { type: "ACKNOWLEDGE" });
+
+    assert.equal(calls.icon.length, paints, "no repaint");
+    assert.equal(calls.titles.length, titles, "no retitle");
+    assert.equal(storage.timer.awaitingStart, true);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("a completion replaces the last toast instead of stacking another", async () => {
+  const { listeners, calls, storage } = await freshWorker();
+  const realNow = Date.now;
+  try {
+    await runToAwaitingPomodoro(listeners, storage);
+    await sendMessage(listeners, { type: "START" });
+    const deadline = storage.timer.endsAt;
+    Date.now = () => deadline + 1_000;
+    await listeners.alarm({ name: "block-end" });
+
+    const ids = new Set(calls.notifications.map(n => n.id));
+    assert.deepEqual([...ids], ["pomoflow-block-end"], "one id for every block-end toast");
+    assert.ok(calls.notifications.length > 1, "several were actually sent");
   } finally {
     Date.now = realNow;
   }

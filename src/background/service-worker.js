@@ -8,7 +8,7 @@
 
 import {
     reconcile, remaining, badgeText, formatTime, remainingSeconds,
-    idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer,
+    idleTimer, startTimer, pauseTimer, resetTimer, awaitingTimer, acknowledgeTimer,
     advanceCycle, shouldAutoStart, sessionRecord, blockInProgress, elapsedSeconds,
     rolloverCycle, resetCycle,
     ATTENTION,
@@ -105,7 +105,10 @@ async function renderAction(timer, settings, customThemes) {
     if (timer.isRunning) {
         title = `${label} — ${formatTime(remainingSeconds(timer, now))} remaining`;
     } else if (timer.awaitingStart) {
-        title = `${label} — ready to start`;   // matches the "!" on the icon
+        // Keyed off `awaitingStart`, not `attention`: once the "!" has been
+        // acknowledged the icon goes back to the mark, and the tooltip is then
+        // the only thing left saying this block was queued rather than paused.
+        title = `${label} — ready to start`;
     } else {
         title = `${label} — paused at ${formatTime(remainingSeconds(timer, now))}`;
     }
@@ -176,12 +179,23 @@ async function playSound(settings) {
 
 // ===== NOTIFICATIONS =====
 
+// One fixed id for every block-end toast, rather than a timestamped one. Two
+// reasons: a new completion then REPLACES the last notice instead of stacking
+// another entry in the notification centre, and acknowledging can clear it by
+// id without enumerating.
+const NOTIFICATION_ID = 'pomoflow-block-end';
+
 async function notify(title, message) {
     const db = store();
     const { data: settings } = await db.getSettings();
     if (!settings.notifications) return;
+    // Clear before creating rather than relying on create() to replace: Chrome
+    // treats create() on an existing id as an update, and an update does not
+    // reliably re-raise a toast that is already sitting in the notification
+    // centre. Clearing first guarantees the new one actually announces itself.
+    await dismissNotification();
     try {
-        await chrome.notifications.create(`pomoflow-${Date.now()}`, {
+        await chrome.notifications.create(NOTIFICATION_ID, {
             type: 'basic',
             iconUrl: chrome.runtime.getURL('src/icons/128.png'),
             title,
@@ -212,6 +226,15 @@ async function loadCycle(settings) {
     // untouched on the same-day path, so this writes at most once per day.
     if (rolled !== cycle) await db.setCycle(rolled);
     return rolled;
+}
+
+async function dismissNotification() {
+    try {
+        await chrome.notifications.clear(NOTIFICATION_ID);
+    } catch (e) {
+        // Nothing downstream depends on the toast being gone.
+        console.warn('Pomoflow: could not clear the notification', e);
+    }
 }
 
 // ===== BLOCK COMPLETION =====
@@ -296,6 +319,24 @@ async function cmdPause() {
     const db = store();
     const timer = await db.getTimer();
     return commit(pauseTimer(timer, Date.now()));
+}
+
+// Spend the end-of-block alert. The "!" is a notification, not a status: seeing
+// it is what clears it, and the toolbar goes back to the Pomoflow mark — the
+// same thing it shows for any other block that is not running. What does NOT
+// change is `awaitingStart`, so the tooltip still reports a block ready to
+// start, and starting it is still what actually settles the cycle.
+//
+// Called by any surface the user can actually see (surface.js) and by the
+// toast's own click handler. The early return matters: those call sites fire on
+// every open and every focus, and a needless commit() here would write storage
+// and wake every OTHER open surface through storage.onChanged.
+async function cmdAcknowledge() {
+    const db = store();
+    const timer = await db.getTimer();
+    if (!timer.attention) return timer;
+    await dismissNotification();   // one dismissal, both channels
+    return commit(acknowledgeTimer(timer));
 }
 
 async function cmdReset() {
@@ -431,9 +472,12 @@ chrome.commands.onCommand.addListener((command) => withLock(async () => {
     }
 }));
 
+// Clicking the toast is the most explicit acknowledgment there is, so don't wait
+// for the page it opens to send one — the tab may take a moment to paint, and
+// the "!" should already be gone by the time it does.
 chrome.notifications.onClicked.addListener((id) => {
     chrome.notifications.clear(id);
-    return openApp();
+    return withLock(cmdAcknowledge).then(openApp);
 });
 
 const HANDLERS = {
@@ -443,6 +487,7 @@ const HANDLERS = {
     PAUSE: cmdPause,
     RESET: cmdReset,
     SKIP: cmdSkip,
+    ACKNOWLEDGE: cmdAcknowledge,
     SWITCH_MODE: (msg) => cmdSwitchMode(msg.mode),
     SETTINGS_CHANGED: cmdSettingsChanged,
     ADJUST_GOAL: (msg) => cmdAdjustGoal(msg.delta),

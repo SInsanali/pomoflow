@@ -50,6 +50,12 @@ export const DEFAULT_TIMER = {
     isRunning: false,
     // True only between a block finishing and the user starting the next one.
     awaitingStart: false,
+    // The unseen half of that: true from the moment a block finishes until the
+    // user acknowledges it. Drives the toolbar "!" and nothing else — see
+    // clock.badgeText. A stored timer from before this field existed reads
+    // undefined, which is falsy, so the worst an old profile gets is no "!" on
+    // the block it was already looking at.
+    attention: false,
 };
 
 // Pomodoros per cycle before a long break. v1 hardcoded 4 in
