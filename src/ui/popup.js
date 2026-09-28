@@ -11,7 +11,7 @@ import {
 import { showFontFaces, syncFontFace } from './font-picker.js';
 import {
     computeStats, denseDays, weekBars, currentStreak, weekdayInitial,
-    ringGeometry, formatDuration,
+    goalSegments, formatDuration,
 } from '../core/charts.js';
 
 const el = (id) => document.getElementById(id);
@@ -88,18 +88,19 @@ const WEEK_DAYS = 7;
 
 // A day with any focus at all must not render as an invisible sliver next to a
 // three-hour day — "a little" and "nothing" have to look different. 6% of the
-// 92px plot is ~5px, which is a legible capsule at the width the popup gives a
-// column (~39px).
+// 84px plot is ~5px, which reads as a bar on the baseline where an empty day
+// draws nothing.
 const MIN_BAR_PERCENT = 6;
 
 function statsOpen() {
     return !el('stats-sheet').hidden;
 }
 
-// The bar strip: seven full-height pill tracks with the day's bar inside each,
-// plus the week's average as a hairline across them. Built as DOM rather than a
-// single SVG so the columns follow the popup's width with no viewBox arithmetic,
-// and so the initials row can share the plot's flex basis and line up under it.
+// The bar strip: seven columns with a squared bar standing on the baseline in
+// each, plus the week's average as a hairline across them. Built as DOM rather
+// than a single SVG so the columns follow the popup's width with no viewBox
+// arithmetic, and so the initials row can share the plot's grid and line up
+// under it.
 function renderWeek(days) {
     const { percents, mean, meanPercent } = weekBars(
         days.map(d => d.focus_seconds), { minVisible: MIN_BAR_PERCENT },
@@ -121,15 +122,23 @@ function renderWeek(days) {
     days.forEach((day, i) => {
         const isToday = i === days.length - 1;
 
-        const track = document.createElement('div');
-        track.className = 'stats-track' + (isToday ? ' today' : '');
-        track.title = `${day.date}: ${formatDuration(day.focus_seconds)}`;
+        const col = document.createElement('div');
+        col.className = 'stats-col' + (isToday ? ' today' : '');
+        // The column carries the height as well as the bar, so the hover label
+        // can sit just above the bar's top without measuring anything.
+        col.style.setProperty('--h', `${percents[i]}%`);
 
         const bar = document.createElement('div');
         bar.className = 'stats-bar';
         bar.style.height = `${percents[i]}%`;
-        track.appendChild(bar);
-        plot.appendChild(track);
+        col.appendChild(bar);
+
+        const tip = document.createElement('span');
+        tip.className = 'stats-tip';
+        tip.textContent = formatDuration(day.focus_seconds);
+        col.appendChild(tip);
+
+        plot.appendChild(col);
 
         const label = document.createElement('span');
         if (isToday) label.className = 'today';
@@ -138,14 +147,19 @@ function renderWeek(days) {
     });
 }
 
-// Today's pomodoros against the session goal. Deliberately counted from the
-// session history rather than read off cycle.totalPomodoros: the header's count
-// is a *today* figure only while the daily reset is on, and it zeroes on a
-// manual reset. A goal ring has to mean the same thing either way.
-function renderRing(blocksToday, goal) {
-    const { circumference, filled } = ringGeometry(blocksToday, goal, 42);
-    el('s-ring').setAttribute('stroke-dasharray', `${filled} ${circumference}`);
-    el('s-ring-count').textContent = `${blocksToday}/${goal}`;
+// Today's pomodoros against the session goal, as a meter of one segment per
+// block. Deliberately counted from the session history rather than read off
+// cycle.totalPomodoros: the header's count is a *today* figure only while the
+// daily reset is on, and it zeroes on a manual reset. A goal meter has to mean
+// the same thing either way.
+function renderMeter(blocksToday, goal) {
+    const meter = el('s-meter');
+    meter.innerHTML = '';
+    for (const filled of goalSegments(blocksToday, goal)) {
+        const segment = document.createElement('i');
+        segment.className = 'stats-segment' + (filled ? ' filled' : '');
+        meter.appendChild(segment);
+    }
 }
 
 async function renderStats() {
@@ -164,7 +178,7 @@ async function renderStats() {
     el('s-today').textContent = formatDuration(today.focus_seconds);
     el('s-today-sub').textContent =
         `${today.blocks} of ${goal} pomodoro${goal === 1 ? '' : 's'}`;
-    renderRing(today.blocks, goal);
+    renderMeter(today.blocks, goal);
 
     el('s-avg').textContent = `avg ${formatDuration(weekSeconds / WEEK_DAYS)}`;
     renderWeek(days);
@@ -173,8 +187,8 @@ async function renderStats() {
     el('s-streak').textContent = currentStreak(stats.daily, today.date);
     el('s-blocks').textContent = stats.totals.all_time_blocks;
 
-    // The tracks and the tiles still render, all at zero: an empty sheet with a
-    // line of text would not show what the sheet is going to look like.
+    // The columns and the totals still render, all at zero: an empty sheet with
+    // a line of text would not show what the sheet is going to look like.
     el('s-empty').hidden = stats.totals.all_time_blocks > 0;
 }
 

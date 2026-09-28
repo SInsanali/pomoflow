@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   bucketDaily, barGeometry, heatmapCells, computeStats,
-  denseDays, currentStreak, weekdayInitial, weekBars, ringGeometry, formatDuration,
+  denseDays, currentStreak, weekdayInitial, weekBars, goalSegments, formatDuration,
 } from "../src/core/charts.js";
 
 test("bucketDaily sums pomodoro focus per local day", () => {
@@ -204,12 +204,12 @@ test("weekBars on an all-zero week draws nothing and does not divide by zero", (
   assert.equal(meanPercent, 0, "guarded max, so no NaN reaches the style attribute");
 });
 
-test("ringGeometry fills a fraction of the circumference and clamps overshoot", () => {
-  const full = 2 * Math.PI * 42;
-  assert.equal(ringGeometry(0, 4, 42).filled, 0);
-  assert.ok(Math.abs(ringGeometry(2, 4, 42).filled - full / 2) < 1e-9, "half a turn");
-  assert.equal(ringGeometry(9, 4, 42).filled, full, "beating the goal does not wrap");
-  assert.equal(ringGeometry(3, 0, 42).filled, 0, "a zero goal is empty, not NaN");
+test("goalSegments is one flag per goal block, filled up to the count", () => {
+  assert.deepEqual(goalSegments(0, 4), [false, false, false, false]);
+  assert.deepEqual(goalSegments(3, 4), [true, true, true, false]);
+  assert.deepEqual(goalSegments(9, 4), [true, true, true, true],
+                   "beating the goal fills the meter and adds no segments");
+  assert.deepEqual(goalSegments(3, 0), [], "a zero goal is no meter at all");
 });
 
 test("formatDuration rounds to minutes before splitting the hour", () => {

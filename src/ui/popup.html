@@ -121,25 +121,15 @@
         </div>
 
         <div class="stats-body">
-            <!-- Today, as a goal ring against the session goal. The ring is the
-                 one thing worth reading at a glance, so it gets the top slot and
-                 the biggest number. -->
+            <!-- Today, against the session goal. The one number worth reading
+                 at a glance gets the top slot and the biggest type; the meter
+                 under it is one segment per block in the goal, filled by
+                 renderStats. -->
             <section class="stats-hero">
-                <div class="stats-ring">
-                    <svg viewBox="0 0 100 100" aria-hidden="true">
-                        <circle class="stats-ring-track" cx="50" cy="50" r="42" />
-                        <!-- dasharray is rewritten by renderStats; 0-length here
-                             so an unrendered ring shows empty, never full. -->
-                        <circle class="stats-ring-fill" id="s-ring" cx="50" cy="50" r="42"
-                                stroke-dasharray="0 264" />
-                    </svg>
-                    <span class="stats-ring-count" id="s-ring-count">0/4</span>
-                </div>
-                <div class="stats-hero-text">
-                    <span class="stats-hero-label">Today</span>
-                    <span class="stats-hero-value" id="s-today">0m</span>
-                    <span class="stats-hero-sub" id="s-today-sub">0 of 4 pomodoros</span>
-                </div>
+                <span class="stats-hero-label">Today</span>
+                <span class="stats-hero-value" id="s-today">0m</span>
+                <span class="stats-hero-sub" id="s-today-sub">0 of 4 pomodoros</span>
+                <div class="stats-meter" id="s-meter" aria-hidden="true"></div>
             </section>
 
             <section class="stats-block">
@@ -147,27 +137,27 @@
                     <span class="qs-label">Last 7 days</span>
                     <span class="stats-aside" id="s-avg">avg 0m</span>
                 </div>
-                <!-- Both rows are filled by renderStats and share one gap value,
-                     so each initial sits under its own bar. -->
+                <!-- Both rows are filled by renderStats and share one seven-column
+                     grid, so each initial sits under its own bar. -->
                 <div class="stats-plot" id="s-plot"></div>
                 <div class="stats-days" id="s-days"></div>
             </section>
 
-            <!-- One tile per theme accent. The three colours are the theme's
+            <!-- One total per theme accent. The three colours are the theme's
                  whole palette, so the sheet shows what was picked upstairs
                  rather than repeating a single accent three times. -->
-            <section class="stats-tiles">
-                <div class="stats-tile" data-accent="pomodoro">
-                    <span class="stats-tile-value" id="s-week">0m</span>
-                    <span class="stats-tile-label">This week</span>
+            <section class="stats-totals">
+                <div class="stats-total" data-accent="pomodoro">
+                    <span class="stats-total-value" id="s-week">0m</span>
+                    <span class="stats-total-label">This week</span>
                 </div>
-                <div class="stats-tile" data-accent="shortBreak">
-                    <span class="stats-tile-value" id="s-streak">0</span>
-                    <span class="stats-tile-label">Day streak</span>
+                <div class="stats-total" data-accent="shortBreak">
+                    <span class="stats-total-value" id="s-streak">0</span>
+                    <span class="stats-total-label">Day streak</span>
                 </div>
-                <div class="stats-tile" data-accent="longBreak">
-                    <span class="stats-tile-value" id="s-blocks">0</span>
-                    <span class="stats-tile-label">All-time</span>
+                <div class="stats-total" data-accent="longBreak">
+                    <span class="stats-total-value" id="s-blocks">0</span>
+                    <span class="stats-total-label">All-time</span>
                 </div>
             </section>
 

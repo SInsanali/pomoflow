@@ -815,65 +815,18 @@ body.popup {
     flex: 1 1 auto;
 }
 
-/* ----- Today's ring ----- */
+/* The one hairline in the header: the sheet below has no boxes, so the rule is
+   what separates chrome from content. */
+.stats-sheet .qs-head {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ----- Today ----- */
 .stats-hero {
     display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.stats-ring {
-    position: relative;
-    flex: 0 0 auto;
-    width: 84px;
-    height: 84px;
-    display: grid;
-    place-items: center;
-}
-
-.stats-ring svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    /* Start the arc at 12 o'clock instead of 3, the way every progress ring
-       people already know does. */
-    transform: rotate(-90deg);
-}
-
-.stats-ring-track,
-.stats-ring-fill {
-    fill: none;
-    stroke-width: 9;
-}
-
-.stats-ring-track {
-    stroke: color-mix(in srgb, var(--pomodoro-accent) 18%, transparent);
-}
-
-.stats-ring-fill {
-    stroke: var(--pomodoro-accent);
-    /* Rounded ends, and the whole reason the arc is one dash rather than a
-       dashoffset: a round cap on a dashed stroke would cap every gap too. */
-    stroke-linecap: round;
-    transition: stroke-dasharray 0.5s ease;
-}
-
-/* Sits inside the ring, so the count and the arc read as one object. */
-.stats-ring-count {
-    position: relative;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.2px;
-}
-
-.stats-hero-text {
-    display: flex;
     flex-direction: column;
-    gap: 3px;
-    min-width: 0;
+    gap: 5px;
 }
 
 .stats-hero-label {
@@ -885,7 +838,7 @@ body.popup {
 
 /* The one number the sheet exists to show, so it is the only one at this size. */
 .stats-hero-value {
-    font-size: 1.9rem;
+    font-size: 2.2rem;
     font-weight: 600;
     line-height: 1.05;
     color: var(--pomodoro-accent);
@@ -898,11 +851,33 @@ body.popup {
     color: var(--text-secondary);
 }
 
+/* The goal meter: one squared segment per pomodoro in the goal, filled left to
+   right. A grid rather than flex so a goal of 1 or 12 still spans the width
+   with the same gap between segments. */
+.stats-meter {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 3px;
+    height: 6px;
+    margin-top: 8px;
+}
+
+.stats-segment {
+    display: block;
+    background: var(--bg-glass-hover);
+    transition: background 0.3s ease;
+}
+
+.stats-segment.filled {
+    background: var(--pomodoro-accent);
+}
+
 /* ----- Week strip ----- */
 .stats-block {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 8px;
 }
 
 .stats-block-head {
@@ -917,44 +892,59 @@ body.popup {
     font-variant-numeric: tabular-nums;
 }
 
-/* Full-height pill tracks with the day's bar rising inside each one — the empty
-   part of the track is what makes a light day legible as a light day rather
-   than as a missing bar. Fixed height so the sheet's measured height does not
-   move with the data. */
+/* Seven columns on one baseline rule, a squared bar standing in each. An empty
+   day draws nothing: with a baseline under it, nothing is legible as nothing.
+   Fixed height so the sheet's measured height does not move with the data. */
 .stats-plot {
     position: relative;
-    display: flex;
-    align-items: stretch;
-    gap: 6px;
-    height: 92px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    align-items: end;
+    height: 84px;
+    border-bottom: 1px solid var(--border-light);
 }
 
-.stats-track {
+.stats-col {
     position: relative;
-    flex: 1 1 0;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--pomodoro-accent) 13%, transparent);
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
 }
 
-/* Its own capsule inside the track rather than a rounded-top bar clipped by it.
-   The clipped version depends on where a 999px corner lands on a 3px bar, which
-   is the kind of thing that can only be settled in a browser — and the shortest
-   bar, the one MIN_BAR_PERCENT exists to keep visible, is exactly the one the
-   corner would have eaten. A capsule is never taller than its track, so there is
-   nothing to clip and nothing to get wrong. */
 .stats-bar {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 999px;
+    width: 22px;
     background: var(--pomodoro-accent);
     /* Past days step back so today reads as today without a second colour. */
-    opacity: 0.62;
+    opacity: 0.55;
     transition: height 0.45s ease, opacity 0.25s ease;
 }
 
-.stats-track.today .stats-bar {
+.stats-col.today .stats-bar,
+.stats-col:hover .stats-bar {
+    opacity: 1;
+}
+
+/* The day's total, shown on hover just above its bar. --h is the bar's height,
+   set by renderStats on the column. */
+.stats-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--h, 0%) + 6px);
+    transform: translateX(-50%);
+    padding: 2px 5px;
+    font-size: 0.6rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+
+.stats-col:hover .stats-tip {
     opacity: 1;
 }
 
@@ -971,17 +961,12 @@ body.popup {
     pointer-events: none;
 }
 
+/* The same seven columns as .stats-plot, so an initial lands under its own bar. */
 .stats-days {
-    display: flex;
-    /* Same gap as .stats-plot, and each cell the same flex basis, so an initial
-       lands under its own bar. */
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
     font-size: 0.63rem;
     color: var(--text-tertiary);
-}
-
-.stats-days span {
-    flex: 1 1 0;
     text-align: center;
 }
 
@@ -991,41 +976,45 @@ body.popup {
 }
 
 /* ----- Totals ----- */
-.stats-tiles {
+/* Three columns split by hairlines rather than three boxes: the values carry
+   the hierarchy, and a box around each would be a fourth thing to read. */
+.stats-totals {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 7px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
 }
 
-.stats-tile {
+.stats-total {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 9px 4px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: var(--bg-glass);
-    text-align: center;
+    gap: 4px;
+    padding-inline: 12px;
+    border-left: 1px solid var(--border-color);
 }
 
-/* One accent per tile — the theme's three colours, in the theme's own order. */
-.stats-tile[data-accent="pomodoro"] .stats-tile-value { color: var(--pomodoro-accent); }
-.stats-tile[data-accent="shortBreak"] .stats-tile-value { color: var(--short-break-accent); }
-.stats-tile[data-accent="longBreak"] .stats-tile-value { color: var(--long-break-accent); }
+.stats-total:first-child {
+    padding-left: 0;
+    border-left: 0;
+}
 
-.stats-tile-value {
-    font-size: 1rem;
+/* One accent per total — the theme's three colours, in the theme's own order. */
+.stats-total[data-accent="pomodoro"] .stats-total-value { color: var(--pomodoro-accent); }
+.stats-total[data-accent="shortBreak"] .stats-total-value { color: var(--short-break-accent); }
+.stats-total[data-accent="longBreak"] .stats-total-value { color: var(--long-break-accent); }
+
+.stats-total-value {
+    font-size: 1.05rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.2px;
-    /* Never wrap "1h 20m" onto two lines — it would grow the tile row and the
-       sheet under it. */
+    /* Never wrap "1h 20m" onto two lines — it would grow the row and the sheet
+       under it. */
     white-space: nowrap;
 }
 
-.stats-tile-label {
-    font-size: 0.6rem;
+.stats-total-label {
+    font-size: 0.58rem;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--text-tertiary);

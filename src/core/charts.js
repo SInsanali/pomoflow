@@ -140,16 +140,13 @@ export function weekBars(values, { minVisible = 0 } = {}) {
   };
 }
 
-// A progress ring's stroke dashes. Drawn as `stroke-dasharray="filled gap"` with
-// the gap set to the whole circumference, so one dash paints the arc and the
-// rest of the circle stays empty with no dashoffset arithmetic.
-//
-// Clamped to one full turn: overshooting a goal must not wrap the arc back over
-// itself, which reads as *less* progress. The caller still shows the true count.
-export function ringGeometry(value, goal, radius) {
-  const circumference = 2 * Math.PI * radius;
-  const fraction = goal > 0 ? Math.min(1, Math.max(0, value / goal)) : 0;
-  return { circumference, filled: circumference * fraction, fraction };
+// A segmented goal meter: one flag per block in the goal, filled left to right
+// up to today's count. Clamped to the goal — overshooting must not grow the
+// meter, which would make the goal look like it moved. The caller still shows
+// the true count.
+export function goalSegments(value, goal) {
+  const n = Math.max(0, Math.floor(goal));
+  return Array.from({ length: n }, (_, i) => i < value);
 }
 
 // Bar rects for a simple column chart. The tallest value maps to full height;

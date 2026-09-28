@@ -25,7 +25,7 @@ const IDS = [
     'qs-hue', 'qs-sat', 'qs-light', 'qs-hex', 'qs-theme-cancel',
     'qs-theme-save', 'qs-theme-delete',
     // The sheet under test.
-    'stats-sheet', 'stats-btn', 'stats-close', 's-ring', 's-ring-count',
+    'stats-sheet', 'stats-btn', 'stats-close', 's-meter',
     's-today', 's-today-sub', 's-avg', 's-plot', 's-days',
     's-week', 's-streak', 's-blocks', 's-empty',
 ];
@@ -162,51 +162,48 @@ test('the chart button opens the sheet and folds the log into the headline', asy
                  'week total over seven days, including the empty ones');
 });
 
-test('the ring is an arc of the circumference, not a full circle', async () => {
+test('the meter is one segment per goal block, filled up to today', async () => {
     const { registry } = await boot({ sessions: HISTORY });
     await openStats(registry);
 
-    const circumference = 2 * Math.PI * 42;
-    const [filled, gap] = registry.get('s-ring')
-        .getAttribute('stroke-dasharray').split(' ').map(Number);
-
-    assert.ok(Math.abs(gap - circumference) < 1e-6, 'the gap is one whole turn');
-    assert.ok(Math.abs(filled - circumference * 0.75) < 1e-6, '3 of 4 is three quarters');
-    assert.equal(registry.get('s-ring-count').textContent, '3/4');
+    const segments = registry.get('s-meter').children;
+    assert.equal(segments.length, 4, 'a segment per pomodoro in the goal');
+    assert.deepEqual(segments.map(s => s.classList.contains('filled')),
+                     [true, true, true, false], '3 of 4, left to right');
 });
 
-test('beating the goal fills the ring without wrapping past itself', async () => {
+test('beating the goal fills the meter without adding segments', async () => {
     const { registry } = await boot({ sessions: HISTORY, sessionGoal: 2 });
     await openStats(registry);
 
-    const circumference = 2 * Math.PI * 42;
-    const filled = Number(registry.get('s-ring')
-        .getAttribute('stroke-dasharray').split(' ')[0]);
-
-    assert.ok(Math.abs(filled - circumference) < 1e-6, 'clamped to one turn');
-    assert.equal(registry.get('s-ring-count').textContent, '3/2',
+    const segments = registry.get('s-meter').children;
+    assert.equal(segments.length, 2, 'the meter is the goal, not the count');
+    assert.ok(segments.every(s => s.classList.contains('filled')));
+    assert.equal(registry.get('s-today-sub').textContent, '3 of 2 pomodoros',
                  'the true count still shows');
 });
 
-test('the strip is seven tracks plus the average, today last', async () => {
+test('the strip is seven columns plus the average, today last', async () => {
     const { registry } = await boot({ sessions: HISTORY });
     await openStats(registry);
 
     const plot = registry.get('s-plot');
     const mean = plot.children.filter(c => c.classList.contains('stats-mean'));
-    const tracks = plot.children.filter(c => c.classList.contains('stats-track'));
+    const tracks = plot.children.filter(c => c.classList.contains('stats-col'));
 
-    assert.equal(tracks.length, 7, 'one track per day of the window');
+    assert.equal(tracks.length, 7, 'one column per day of the window');
     assert.equal(mean.length, 1, 'and one average line');
     assert.ok(tracks.at(-1).classList.contains('today'), 'today is the last column');
     assert.ok(!tracks[0].classList.contains('today'));
 
-    // Tallest day scales to the full track; the rest are proportional to it.
+    // Tallest day scales to the full plot; the rest are proportional to it.
     const height = (track) => track.children[0].style.height;
     assert.equal(height(tracks.at(-1)), '100%', "today is the week's max");
     assert.equal(height(tracks.at(-2)),
                  `${(3000 / TODAY_SECONDS) * 100}%`, 'yesterday against today');
     assert.equal(height(tracks[4]), '0%', 'an empty day draws no bar at all');
+    assert.equal(tracks.at(-1).style.getPropertyValue('--h'), '100%',
+                 'the column carries the height too, for the hover label');
 
     const meanPercent = (WEEK_SECONDS / 7 / TODAY_SECONDS) * 100;
     assert.equal(mean[0].style.bottom, `${meanPercent}%`);
@@ -217,7 +214,7 @@ test('the day initials line up one per bar, with today marked', async () => {
     await openStats(registry);
 
     const labels = registry.get('s-days').children;
-    assert.equal(labels.length, 7, 'one initial per track');
+    assert.equal(labels.length, 7, 'one initial per column');
     for (const label of labels) {
         assert.match(label.textContent, /^[SMTWF]$/, 'a single weekday letter');
     }
@@ -226,7 +223,7 @@ test('the day initials line up one per bar, with today marked', async () => {
 });
 
 // An empty sheet plus a line of text would not show what the sheet is for, so
-// the tracks and tiles still render — at zero.
+// the columns and totals still render — at zero.
 test('an empty history renders zeros and says so, without dividing by zero', async () => {
     const { registry } = await boot({ sessions: [] });
     await openStats(registry);
@@ -236,12 +233,13 @@ test('an empty history renders zeros and says so, without dividing by zero', asy
     assert.equal(registry.get('s-avg').textContent, 'avg 0m');
     assert.equal(registry.get('s-streak').textContent, '0');
     assert.equal(registry.get('s-blocks').textContent, '0');
-    assert.equal(registry.get('s-ring').getAttribute('stroke-dasharray').split(' ')[0], '0');
+    assert.ok(registry.get('s-meter').children.every(s => !s.classList.contains('filled')),
+              'an empty meter');
     assert.equal(registry.get('s-empty').hidden, false, 'the note explains the zeros');
 
     const plot = registry.get('s-plot');
-    assert.equal(plot.children.filter(c => c.classList.contains('stats-track')).length, 7,
-                 'the empty tracks still show the shape of the week');
+    assert.equal(plot.children.filter(c => c.classList.contains('stats-col')).length, 7,
+                 'the empty columns still show the shape of the week');
     assert.equal(plot.children.filter(c => c.classList.contains('stats-mean')).length, 0,
                  'an average of zero would just be a second baseline');
 });
