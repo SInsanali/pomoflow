@@ -342,11 +342,17 @@ async function cmdPause() {
 // toast's own click handler. The early return matters: those call sites fire on
 // every open and every focus, and a needless commit() here would write storage
 // and wake every OTHER open surface through storage.onChanged.
+//
+// The desktop toast is deliberately NOT cleared here. A surface acknowledges the
+// instant the block end lands in it, and for a popup that is open while the
+// timer runs out that is the same second macOS shows the banner — the toast was
+// being taken down about three seconds after it appeared, before anyone could
+// read it. macOS expires a banner on its own; the toast's click handler clears
+// it, and the next completion replaces it (notify() clears by id first).
 async function cmdAcknowledge() {
     const db = store();
     const timer = await db.getTimer();
     if (!timer.attention) return timer;
-    await dismissNotification();   // one dismissal, both channels
     return commit(acknowledgeTimer(timer));
 }
 

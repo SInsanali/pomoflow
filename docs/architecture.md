@@ -125,7 +125,11 @@ which would stop the icon answering the only question it exists to answer.
 
 All block-end notifications share one id (`pomoflow-block-end`), so a completion
 replaces the last notice instead of stacking another entry in the notification
-centre, and one acknowledgment clears both channels.
+centre. Acknowledging clears the `!` only; the toast is left to macOS. A surface
+acknowledges the instant the completion lands in it, which for a popup open
+while the timer runs out is the same second the banner appears, so clearing the
+toast there took it down before it could be read. Clicking the toast clears it,
+and the next completion replaces it.
 
 Its **colour names the block that just ended** — not the one queued behind it.
 Finish a short break and the `!` wears the short break's accent even though a

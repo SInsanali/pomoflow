@@ -620,6 +620,9 @@ test("acknowledging the '!' restores the Pomoflow mark without starting anything
     await runToAwaitingPomodoro(listeners, storage);
     assert.equal(calls.icon.at(-1).text, "!");
 
+    // notify() clears the toast by id before it creates it, so what matters is
+    // whether acknowledging adds a clear of its own.
+    const dismissedBefore = calls.dismissed.length;
     await sendMessage(listeners, { type: "ACKNOWLEDGE" });
 
     // The whole point: the alert is spent, the block is not.
@@ -634,8 +637,13 @@ test("acknowledging the '!' restores the Pomoflow mark without starting anything
     // must not start calling an unstarted block "paused".
     assert.match(calls.titles.at(-1), /ready to start/);
 
-    // One dismissal covers both channels.
-    assert.ok(calls.dismissed.includes("pomoflow-block-end"), "the toast is cleared too");
+    // The toast is NOT taken down with the mark. A surface acknowledges the
+    // moment the block end lands in it, which for an open popup is the same
+    // second macOS shows the banner — clearing here made the toast vanish
+    // before anyone could read it. macOS expires the banner on its own; the
+    // next completion or a click replaces or clears it.
+    assert.equal(calls.dismissed.length, dismissedBefore,
+                 "acknowledging leaves the toast to macOS");
 
     // Starting it from here still behaves.
     await sendMessage(listeners, { type: "START" });
